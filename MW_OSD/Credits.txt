@@ -1,0 +1,21 @@
+Major code contributors:
+Jean Gabriel Maurice
+Itai Nahshon
+Carlo Nebuloni
+Ross Power
+Liam O´Brien
+Andi Sch
+Kataventos
+Alex Dubus (GUI framework)
+Gary Moscardini
+Hayden Thring
+
+Suggestions for improvement / identifying bugs 
+PatrikE
+Okan Vitaliy
+VVK
+Bicycle
+Deet
+
+
+Please report any missing names...

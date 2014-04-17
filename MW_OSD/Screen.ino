@@ -156,7 +156,9 @@ void displayMode(void)
       screenBuffer[0]=SYM_ACRO;
       screenBuffer[1]=SYM_ACRO1;
     }
-    MAX7456_WriteString(screenBuffer,getPosition(sensorPosition)+LINE);
+    if(Settings[S_MODEICON]){
+      MAX7456_WriteString(screenBuffer,getPosition(sensorPosition)+LINE);
+    }
     if(MwSensorActive&mode_camstab&&Settings[S_GIMBAL]){
       screenBuffer[2]=0;
       screenBuffer[0]=SYM_GIMBAL;
@@ -185,6 +187,7 @@ void displayMode(void)
 
 void displayArmed(void)
 {
+#ifndef HIDEARMEDSTATUS
   if(!armed){
     MAX7456_WriteString_P(disarmed_text, getPosition(motorArmedPosition));
     armedtimer=20;
@@ -193,6 +196,7 @@ void displayArmed(void)
     armedtimer--;
     MAX7456_WriteString_P(armed_text, getPosition(motorArmedPosition));
   }
+#endif  
 }
 
 void displayCallsign(void)
@@ -1329,10 +1333,22 @@ void displayDebug(void)
 #if defined DEBUG
   if(!Settings[S_DEBUG])
     return;
-    debug[0]=sensorfilter[0][SENSORFILTERSIZE];
-    debug[1]=sensorfilter[1][SENSORFILTERSIZE];
-    debug[2]=sensorfilter[2][SENSORFILTERSIZE];
-    debug[3]=sensorfilter[3][SENSORFILTERSIZE];
+ 
+//  debug[0]=S16_AMPMAX;
+//  debug[1]=Settings[S_AMPDIVIDERRATIO];
+//  debug[2]=Settings[S_AMPMAXL];
+//  debug[3]=Settings[S_AMPMAXH];
+
+//  debug[0]=sensorpinarray[0];
+//  debug[1]=sensorpinarray[1];
+//  debug[2]=sensorpinarray[2];
+//  debug[3]=sensorpinarray[3];
+
+  debug[0]=sensorfilter[0][0];
+  debug[1]=sensorfilter[1][0];
+  debug[2]=sensorfilter[2][0];
+  debug[3]=analogRead(AMPERAGEPIN);
+
   for(uint8_t X=0; X<4; X++) {
     ItoaPadded(debug[X], screenBuffer+2,7,0);     
     screenBuffer[0] = 0x30+X;
