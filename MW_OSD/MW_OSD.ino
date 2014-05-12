@@ -16,6 +16,7 @@ This work is based on the following open source work :-
  All credit and full acknowledgement to the incredible work and hours from the many developers, contributors and testers that have helped along the way.
  Jean Gabriel Maurice. He started the revolution. He was the first....
  
+ Please refer to credits.txt for list of individual contributions
 */
             
 #include <avr/pgmspace.h>
@@ -62,6 +63,11 @@ void setup()
  
   checkEEPROM();
   readEEPROM();
+  
+#ifdef STARTUPDELAY
+  delay(1000);
+#endif
+
   MAX7456Setup();
  
   if (Settings[S_VREFERENCE])
@@ -112,10 +118,13 @@ void setMspRequests() {
     if(!armed || Settings[S_THROTTLEPOSITION] || fieldIsVisible(pMeterSumPosition) || fieldIsVisible(amperagePosition) )
       modeMSPRequests |= REQ_MSP_RC;
 
-    if(mode_armed == 0) {
+    if(mode.armed == 0) {
         modeMSPRequests |= REQ_MSP_BOX;
 
     }
+#if defined SPORT_CELLS    
+    modeMSPRequests |= REQ_MSP_CELLS;
+#endif
   }
  
   if(Settings[S_MAINVOLTAGE_VBAT] ||
@@ -125,7 +134,7 @@ void setMspRequests() {
 
   // so we do not send requests that are not needed.
   queuedMSPRequests &= modeMSPRequests;
-  lastCallSign = onTime;
+  timer.lastCallSign = onTime;
 
 }
 
@@ -134,7 +143,7 @@ void loop()
  
 
   // Blink Basic Sanity Test Led at 1hz
-  if(tenthSec>10)
+  if(timer.tenthSec>10)
     digitalWrite(LEDPIN,HIGH);
   else
     digitalWrite(LEDPIN,LOW);
@@ -154,9 +163,9 @@ void loop()
   {
     previous_millis_high = previous_millis_high+hi_speed_cycle;   
 
-    tenthSec++;
-    halfSec++;
-    Blink10hz=!Blink10hz;
+    timer.tenthSec++;
+    timer.halfSec++;
+    timer.Blink10hz=!timer.Blink10hz;
     calculateTrip();
     
       uint8_t MSPcmdsend;
@@ -211,6 +220,9 @@ void loop()
        case REQ_MSP_DEBUG:
          MSPcmdsend = MSP_DEBUG;
          break;
+       case REQ_MSP_CELLS:
+         MSPcmdsend = MSP_CELLS;
+         break;
     }
       if(!fontMode)
       blankserialRequest(MSPcmdsend);      
@@ -228,7 +240,7 @@ void loop()
       }
       if(previousarmedstatus && !armed){
         armedtimer=20;
-        configPage=8;
+        configPage=0;
         ROW=10;
         COL=1;
         configMode=1;
@@ -242,8 +254,8 @@ void loop()
       {
        // CollectStatistics();      DO NOT DELETE
 
-        if(Settings[S_DISPLAYVOLTAGE]&&((voltage>Settings[S_VOLTAGEMIN])||(Blink2hz))) displayVoltage();
-        if(Settings[S_DISPLAYRSSI]&&((rssi>Settings[S_RSSI_ALARM])||(Blink2hz))) displayRSSI();
+        if(Settings[S_DISPLAYVOLTAGE]&&((voltage>Settings[S_VOLTAGEMIN])||(timer.Blink2hz))) displayVoltage();
+        if(Settings[S_DISPLAYRSSI]&&((rssi>Settings[S_RSSI_ALARM])||(timer.Blink2hz))) displayRSSI();
 
         displayTime();
 #ifdef TEMPSENSOR
@@ -256,14 +268,18 @@ void loop()
         if (Settings[S_THROTTLEPOSITION])
           displayCurrentThrottle();
 
-#if defined CALLSIGNALWAYS
-        displayCallsign();       
+#ifdef CALLSIGNALWAYS
+        if(Settings[S_DISPLAY_CS]) displayCallsign(CALLSIGNALWAYS); 
+#elif  CALLSIGNLLIGHTS
+        if (MwSensorActive&mode.llights) displayCallsign(CALLSIGNLLIGHTS); 
+#elif  CALLSIGNGIMBAL
+        if (MwSensorActive&mode.camstab) displayCallsign(CALLSIGNGIMBAL); 
 #else 
-        if ( (onTime > (lastCallSign+300)) || (onTime < (lastCallSign+4)))
+        if ( (onTime > (timer.lastCallSign+300)) || (onTime < (timer.lastCallSign+4)))
        {
            // Displays 4 sec every 5min (no blink during flight)
-        if ( onTime > (lastCallSign+300))lastCallSign = onTime; 
-        displayCallsign();       
+        if ( onTime > (timer.lastCallSign+300)) timer.lastCallSign = onTime; 
+        if(Settings[S_DISPLAY_CS]) displayCallsign(getPosition(callSignPosition));       
        }
 #endif
 
@@ -290,8 +306,8 @@ void loop()
           displayGPS_speed();
           displayGPSPosition();
           displayGPS_time();
-          if(Settings[S_ENABLEADC]) mapmode();
-#ifdef FIXEDWING // required because FW does not use BARO / MAG
+          if(Settings[S_MAPMODE]) mapmode();
+#ifdef FIXEDWING // required because FW can fly without BARO / MAG
           displayAltitude();
           displayClimbRate();
           displayHeadingGraph();
@@ -300,18 +316,21 @@ void loop()
         }
         displayMode();       
         displayDebug();
+#if defined SPORT_CELLS
+        if(MwSensorPresent)displayCells();
+#endif
       }
     }
   }  // End of fast Timed Service Routine (50ms loop)
 
-  if(halfSec >= 10) {
-    halfSec = 0;
-    Blink2hz =! Blink2hz;
+  if(timer.halfSec >= 10) {
+    timer.halfSec = 0;
+    timer.Blink2hz =! timer.Blink2hz;
   }
 
-  if(tenthSec >= 20)     // this execute 1 time a second
+  if(timer.tenthSec >= 20)     // this execute 1 time a second
   {
-    tenthSec=0;
+    timer.tenthSec=0;
     onTime++;
 
   amperagesum += amperage;
@@ -329,20 +348,20 @@ void loop()
     }
     allSec++;
 
-    if((accCalibrationTimer==1)&&(configMode)) {
+    if((timer.accCalibrationTimer==1)&&(configMode)) {
       blankserialRequest(MSP_ACC_CALIBRATION);
-      accCalibrationTimer=0;
+      timer.accCalibrationTimer=0;
     }
 
-    if((magCalibrationTimer==1)&&(configMode)) {
+    if((timer.magCalibrationTimer==1)&&(configMode)) {
       blankserialRequest(MSP_MAG_CALIBRATION);
-      magCalibrationTimer=0;
+      timer.magCalibrationTimer=0;
     }
 
 //    if(accCalibrationTimer>0) accCalibrationTimer--;
-    if(magCalibrationTimer>0) magCalibrationTimer--;
+    if(timer.magCalibrationTimer>0) timer.magCalibrationTimer--;
 
-    if(rssiTimer>0) rssiTimer--;
+    if(timer.rssiTimer>0) timer.rssiTimer--;
   }
 
   serialMSPreceive();
@@ -481,6 +500,15 @@ void gpsdistancefix(void){
 } 
 
 
+uint8_t * heapptr, * stackptr;
+void check_mem() {
+  stackptr = (uint8_t *)malloc(4);          
+  heapptr = stackptr;                    
+  free(stackptr);      
+  stackptr =  (uint8_t *)(SP);          
+}
+
+
 void ProcessSensors(void) {
   /*
     special note about filter: last row of array = averaged reading
@@ -488,7 +516,6 @@ void ProcessSensors(void) {
 //-------------- ADC and PWM RSSI sensor read into filter array
   static uint8_t sensorindex;
   for (uint8_t sensor=0;sensor<SENSORTOTAL;sensor++) {
-    sensorfilter[sensor][SENSORFILTERSIZE] = sensorfilter[sensor][SENSORFILTERSIZE] - sensorfilter[sensor][sensorindex];         
     int16_t sensortemp;
 //    uint8_t sensorpin = sensorpinarray[sensor];
     sensortemp = analogRead(sensorpinarray[sensor]);
@@ -497,9 +524,58 @@ void ProcessSensors(void) {
         sensortemp = pulseIn(PWMRSSIPIN, HIGH,21000)>>1;
       }
     }
-#ifdef STAGE2FILTER     
+#if defined STAGE2FILTER // Use averaged change    
+    sensorfilter[sensor][SENSORFILTERSIZE] = sensorfilter[sensor][SENSORFILTERSIZE] - sensorfilter[sensor][sensorindex];         
     sensorfilter[sensor][sensorindex] = (sensorfilter[sensor][sensorindex] + sensortemp)>>1;
-#else
+#elif defined SMOOTHFILTER // Shiki variable constraint probability trend change filter. Smooth filtering of small changes, but react fast to consistent changes
+    #define FILTERMAX 128 //maximum change permitted each iteration 
+    uint8_t filterdir;
+    static uint8_t oldfilterdir[SENSORTOTAL];
+    int16_t sensoraverage=sensorfilter[sensor][SENSORFILTERSIZE]>>3;
+    sensorfilter[sensor][SENSORFILTERSIZE] = sensorfilter[sensor][SENSORFILTERSIZE] - sensorfilter[sensor][sensorindex];         
+    if (sensorfilter[sensor][SENSORFILTERSIZE+1]<1) sensorfilter[sensor][SENSORFILTERSIZE+1]=1;
+
+    if (sensortemp != sensoraverage ){
+
+      // determine direction of change
+      if (sensortemp > sensoraverage ) {  //increasing
+        filterdir=1;
+      }
+      else if (sensortemp < sensoraverage ) {  //increasing
+        filterdir=0;
+      }
+      // compare to previous direction of change
+      if (filterdir!=oldfilterdir[sensor]){ // direction changed => lost trust in value - reset value truth probability to lowest
+        sensorfilter[sensor][SENSORFILTERSIZE+1] = 1; 
+      }
+      else { // direction same => increase trust that change is valid - increase value truth probability
+        sensorfilter[sensor][SENSORFILTERSIZE+1]=sensorfilter[sensor][SENSORFILTERSIZE+1] <<1;
+      }
+      // set maximum trust permitted per sensor read
+      if (sensorfilter[sensor][SENSORFILTERSIZE+1] > FILTERMAX) {
+        sensorfilter[sensor][SENSORFILTERSIZE+1] = FILTERMAX;
+      }
+      // set constrained value or if within limits, start to narrow filter 
+      if (sensortemp > sensoraverage+sensorfilter[sensor][SENSORFILTERSIZE+1]) { 
+        sensorfilter[sensor][sensorindex] = sensoraverage+sensorfilter[sensor][SENSORFILTERSIZE+1]; 
+      }  
+      else if (sensortemp < sensoraverage-sensorfilter[sensor][SENSORFILTERSIZE+1]){
+        sensorfilter[sensor][sensorindex] = sensoraverage-sensorfilter[sensor][SENSORFILTERSIZE+1]; 
+      }
+      // as within limits, start to narrow filter 
+      else { 
+        sensorfilter[sensor][sensorindex] = sensortemp; 
+        sensorfilter[sensor][SENSORFILTERSIZE+1]=sensorfilter[sensor][SENSORFILTERSIZE+1] >>2;
+      }
+      oldfilterdir[sensor]=filterdir;
+    }
+    // no change, reset filter 
+    else {
+      sensorfilter[sensor][sensorindex] = sensortemp; 
+      sensorfilter[sensor][SENSORFILTERSIZE+1]=1;  
+    }    
+#else // Use a basic averaging filter
+    sensorfilter[sensor][SENSORFILTERSIZE] = sensorfilter[sensor][SENSORFILTERSIZE] - sensorfilter[sensor][sensorindex];         
     sensorfilter[sensor][sensorindex] = sensortemp;
 #endif
     sensorfilter[sensor][SENSORFILTERSIZE] = sensorfilter[sensor][SENSORFILTERSIZE] + sensorfilter[sensor][sensorindex];
@@ -532,21 +608,25 @@ void ProcessSensors(void) {
 #endif
 
 //-------------- Current
-  if (!Settings[S_AMPERAGE_VIRTUAL]) { // Analogue
-    amperage = sensorfilter[2][SENSORFILTERSIZE]>>3;
-    amperage = map(amperage, Settings[S_AMPMIN]+AMPERAGEOFFSET, S16_AMPMAX, 0, AMPERAGEMAX);
-    if (amperage < 0) amperage=0;
-  }  
-  else {  // Virtual
-    uint32_t Vthrottle = constrain(MwRcData[THROTTLESTICK],1000,2000);
-    Vthrottle = constrain((Vthrottle-1000)/10,10,100);
-    amperage = (Vthrottle+(Vthrottle*Vthrottle*0.02))*S16_AMPMAX*0.01;
-    if(armed)
-      amperage += Settings[S_AMPMIN];
-    else 
-      amperage = Settings[S_AMPMIN];
-  }  
-
+  
+  if(!Settings[S_MWAMPERAGE]) {
+    if (!Settings[S_AMPERAGE_VIRTUAL]) { // Analogue
+      amperage = sensorfilter[2][SENSORFILTERSIZE]>>3;
+      amperage = map(amperage, Settings[S_AMPMIN]+AMPERAGEOFFSET, S16_AMPMAX, 0, AMPERAGEMAX);
+      if (amperage < 0) amperage=0;
+    }  
+    else {  // Virtual
+      uint32_t Vthrottle = constrain(MwRcData[THROTTLESTICK],1000,2000);
+      Vthrottle = constrain((Vthrottle-1000)/10,10,100);
+      amperage = (Vthrottle+(Vthrottle*Vthrottle*0.02))*S16_AMPMAX*0.01;
+      if(armed)
+        amperage += Settings[S_AMPMIN];
+      else 
+        amperage = Settings[S_AMPMIN];
+    }  
+  }else{
+      amperage = MWAmperage / 100;
+  }
 
 //-------------- RSSI
   if (Settings[S_DISPLAYRSSI]) {           
@@ -557,12 +637,12 @@ void ProcessSensors(void) {
       rssi = sensorfilter[4][SENSORFILTERSIZE]>>5; // filter and move to 8 bit
     }
 
-    if((rssiTimer==15)&&(configMode)) {
+    if((timer.rssiTimer==15)&&(configMode)) {
       Settings[S_RSSIMAX]=rssi; // tx on
     }
-    if((rssiTimer==1)&&(configMode)) {
+    if((timer.rssiTimer==1)&&(configMode)) {
       Settings[S_RSSIMIN]=rssi; // tx off
-      rssiTimer=0;
+      timer.rssiTimer=0;
     }
 
     rssi = map(rssi, Settings[S_RSSIMIN], Settings[S_RSSIMAX], 0, 100);
@@ -586,6 +666,5 @@ Serial.print(sensorindex);
   if (sensorindex >= SENSORFILTERSIZE)              
     sensorindex = 0;                           
 }
- 
 
 

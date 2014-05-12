@@ -5,7 +5,6 @@ void SetupGroups(){
   //G_Amperage,
  // G_VVoltage,
  // G_Temperature,
- // G_Board,
  // G_GPS,
 //  G_Other
  
@@ -105,7 +104,7 @@ G_Voltage = GroupcontrolP5.addGroup("G_Voltage")
                 .setBarHeight(15)
                 .setBackgroundColor(color(30,255))
                 .setColorActive(red_)
-                .setBackgroundHeight((5*17) +5)
+                .setBackgroundHeight((6*17) +5)
                 .setLabel("Amperage")
                 //.setGroup(SG)
                 .disableCollapse() 
@@ -134,7 +133,7 @@ G_Voltage = GroupcontrolP5.addGroup("G_Voltage")
                 .align(controlP5.CENTER,controlP5.CENTER)
                 ; 
  G_Temperature = GroupcontrolP5.addGroup("G_Temperature")
-                .setPosition(XTemp,YTemp+15)
+                .setPosition(XTemp,YTemp+15+15)
                 .setWidth(Col3Width+10)
                 .setBarHeight(15)
                 .setColorForeground(color(30,255))
@@ -191,7 +190,9 @@ G_GPS = GroupcontrolP5.addGroup("G_GPS")
                 .toUpperCase(false)
                 .align(controlP5.CENTER,controlP5.CENTER)
                 ;        
-G_Board = GroupcontrolP5.addGroup("G_Board")
+
+G_Board= GroupcontrolP5.addGroup("G_Board")
+                .hide()
                 .setPosition(XBoard,YBoard+15)
                 .setWidth(Col1Width)
                 .setBarHeight(15)
@@ -209,6 +210,8 @@ G_Board = GroupcontrolP5.addGroup("G_Board")
                 .toUpperCase(false)
                 .align(controlP5.CENTER,controlP5.CENTER)
                 ;  
+
+
                
 G_CallSign = GroupcontrolP5.addGroup("G_CallSign")
                 .setPosition(XCS,YCS+15)
@@ -248,6 +251,8 @@ G_Other = GroupcontrolP5.addGroup("G_Other")
                 .toUpperCase(false)
                 .align(controlP5.CENTER,controlP5.CENTER)
                 ;                                          
+
+
 
 G_DISPLAY = GroupcontrolP5.addGroup("G_DISPLAY")
                 .setPosition(XDisplay,YDisplay+15)
@@ -334,7 +339,7 @@ G_VREF = GroupcontrolP5.addGroup("G_VREF")
 G_TIME = GroupcontrolP5.addGroup("G_TIME")
                 .setPosition(XTIME,YTIME+16)
                 .setWidth(Col3Width+10)
-                .setBarHeight(16)
+                .setBarHeight(15)
                 .setColorForeground(color(30,255))
                 .setColorBackground(color(30,255))
                 .setColorLabel(color(0, 110, 220))
@@ -351,6 +356,24 @@ G_TIME = GroupcontrolP5.addGroup("G_TIME")
                 .align(controlP5.CENTER,controlP5.CENTER)
                 ;        
 
-
+G_SPORT = GroupcontrolP5.addGroup("G_SPORT")
+                .setPosition(XSPORT,YSPORT)
+                .setWidth(Col3Width+10)
+                .setBarHeight(15)
+                .setColorForeground(color(30,255))
+                .setColorBackground(color(30,255))
+                .setColorLabel(color(0, 110, 220))
+                .setBarHeight(16)
+                .setBackgroundColor(color(30,255))
+                .setColorActive(red_)
+                .setBackgroundHeight((1*17) +5)
+                .setLabel("FrSky S.Port Data in OSD")
+                //.setGroup(SG)
+                .disableCollapse() 
+                ; 
+                G_SPORT.captionLabel()
+                .toUpperCase(false)
+                .align(controlP5.CENTER,controlP5.CENTER)
+                ;        
   
 }

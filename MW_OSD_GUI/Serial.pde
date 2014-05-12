@@ -223,13 +223,9 @@ void RESTART(){
     tailSerialReply();
   }
   toggleMSP_Data = false;
-  delay(1500);
+  delay(2500);
   READ();
 }  
-
-
-
-
 
 public void READ(){
   
@@ -331,10 +327,10 @@ public void SendChar(){
 }
 
 
-public void RESET(){
+public void DEFAULT(){
  if (init_com==1){
     noLoop();
-    int Reset_result = JOptionPane.showConfirmDialog(this,"Are you sure you wish to RESET?", "RESET OSD MEMORY",JOptionPane.WARNING_MESSAGE,JOptionPane.YES_NO_CANCEL_OPTION);
+    int Reset_result = JOptionPane.showConfirmDialog(this,"Are you sure you wish to set OSD to DEFAULT values?", "RESET OSD MEMORY",JOptionPane.WARNING_MESSAGE,JOptionPane.YES_NO_CANCEL_OPTION);
     loop();
     switch (Reset_result) {
       case JOptionPane.YES_OPTION:
@@ -381,6 +377,7 @@ void SendCommand(int cmd){
         if(toggleModeItems[6].getValue()> 0) modebits |=1<<10;
         if(toggleModeItems[7].getValue()> 0) modebits |=1<<11;
         if(toggleModeItems[8].getValue()> 0) modebits |=1<<19;
+        if(toggleModeItems[8].getValue()> 0) modebits |=1<<16; //Also send LLIGHTS when OSD enabled - for testing
         serialize32(modebits);
         serialize8(0);   // current setting
         tailSerialReply();
@@ -801,9 +798,3 @@ void MWData_Com() {
       }
     }
 }
-
-
-
-
-
-      

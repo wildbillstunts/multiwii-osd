@@ -1,5 +1,5 @@
 enum Settings {
-  S_CHECK_,		// used for check
+  S_CHECK_,    // used for check
   S_RSSIMIN,
   S_RSSIMAX,
   S_RSSI_ALARM,
@@ -12,6 +12,7 @@ enum Settings {
   S_DIVIDERRATIO,
   S_MAINVOLTAGE_VBAT,
   S_AMPERAGE,
+  S_MWAMPERAGE,
   S_AMPER_HOUR,
   S_AMPERAGE_VIRTUAL,
   S_AMPDIVIDERRATIO,
@@ -20,7 +21,7 @@ enum Settings {
   S_VIDVOLTAGE_VBAT,
   S_DISPLAYTEMPERATURE,
   S_TEMPERATUREMAX,
-  S_BOARDTYPE,
+//  S_BOARDTYPE,
   S_DISPLAYGPS,
   S_COORDINATES,
   S_GPSCOORDTOP,
@@ -43,7 +44,7 @@ enum Settings {
   S_GPSTIME,
   S_GPSTZAHEAD,
   S_GPSTZ,
-  S_GPSDS,
+//  S_GPDS,
   S_DEBUG,
   S_SCROLLING,
   S_GIMBAL,

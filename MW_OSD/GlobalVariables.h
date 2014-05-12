@@ -13,7 +13,7 @@
 #define EEPROM_WRITE_DELAY 5       // Calibration timeouts
 
 // DEFINE CONFIGURATION MENU PAGES
-#define MINPAGE 1
+#define MINPAGE 0
 #define MAXPAGE 8
 
 #define PIDITEMS 10
@@ -87,23 +87,30 @@
 //#define SONAR         16//0b00010000
 
 //General use variables
-uint8_t tenthSec=0;
-uint8_t halfSec=0;
-uint8_t Blink2hz=0;                             // This is turing on and off at 2hz
-uint8_t Blink10hz=0;                            // This is turing on and off at 10hz
-int lastCallSign=0;                          //callsign_timer
-uint8_t rssiTimer=0;
-uint8_t accCalibrationTimer=0;
-uint8_t magCalibrationTimer=0;
-uint16_t debug[4];
+struct {
+uint8_t tenthSec;
+uint8_t halfSec;
+uint8_t Blink2hz;                          // This is turing on and off at 2hz
+uint8_t Blink10hz;                         // This is turing on and off at 10hz
+int lastCallSign;                          // Callsign_timer
+uint8_t rssiTimer;
+uint8_t accCalibrationTimer;
+uint8_t magCalibrationTimer;
+}
+timer;
+
+uint16_t debug[4];   // int32_t ?...
 int8_t menudir;
 unsigned int allSec=0;
 uint8_t armedtimer=255;
 uint16_t debugerror;
+
+uint16_t cell_data[6];
+
 // Config status and cursor location
 uint8_t ROW=10;
 uint8_t COL=3;
-uint8_t configPage=MINPAGE;
+int8_t configPage=1;
 uint8_t configMode=0;
 uint8_t fontMode = 0;
 uint8_t fontData[54];
@@ -112,16 +119,19 @@ uint8_t lastCharToRequest;
 uint8_t retransmitQueue;
 
 // Mode bits
-uint32_t mode_armed;
-uint32_t mode_stable;
-uint32_t mode_horizon;
-uint32_t mode_baro;
-uint32_t mode_mag;
-uint32_t mode_gpshome;
-uint32_t mode_gpshold;
-//uint32_t mode_llights;
-uint32_t mode_osd_switch;
-uint32_t mode_camstab;
+struct {
+  uint8_t armed;
+  uint8_t stable;
+  uint8_t horizon;
+  uint8_t baro;
+  uint8_t mag;
+  uint16_t gpshome;
+  uint16_t gpshold;
+  uint16_t camstab;
+  uint32_t osd_switch;
+  uint32_t llights;
+;}mode;
+
 
 // Settings Locations
 enum Setting_ {
@@ -138,6 +148,7 @@ enum Setting_ {
   S_DIVIDERRATIO,
   S_MAINVOLTAGE_VBAT,
   S_AMPERAGE,
+  S_MWAMPERAGE,
   S_AMPER_HOUR,
   S_AMPERAGE_VIRTUAL,
   S_AMPDIVIDERRATIO,
@@ -146,7 +157,6 @@ enum Setting_ {
   S_VIDVOLTAGE_VBAT,
   S_DISPLAYTEMPERATURE,
   S_TEMPERATUREMAX,
-  S_BOARDTYPE,
   S_DISPLAYGPS,
   S_COORDINATES,
   S_GPSCOORDTOP,
@@ -161,7 +171,7 @@ enum Setting_ {
   S_WITHDECORATION,
   S_SHOWBATLEVELEVOLUTION,
   S_RESETSTATISTICS,
-  S_ENABLEADC,
+  S_MAPMODE,
   S_VREFERENCE,
   S_USE_BOXNAMES,
   S_MODEICON,
@@ -169,7 +179,6 @@ enum Setting_ {
   S_GPSTIME,
   S_GPSTZAHEAD,
   S_GPSTZ,
-  S_GPSDS,
   S_DEBUG,
   S_SCROLLING,
   S_GIMBAL,
@@ -217,6 +226,7 @@ uint8_t EEPROM_DEFAULT[EEPROM_SETTINGS] = {
 200, // S_DIVIDERRATIO              10
 0,   // S_MAINVOLTAGE_VBAT          11
 0,   // S_AMPERAGE                  12
+0,   // S_MWAMPERAGE                12a :)
 0,   // S_AMPER_HOUR                13
 1,   // S_AMPERAGE_VIRTUAL,
 150, // S_AMPDIVIDERRATIO,
@@ -225,7 +235,6 @@ uint8_t EEPROM_DEFAULT[EEPROM_SETTINGS] = {
 0,   // S_VIDVOLTAGE_VBAT           16 
 0,   // S_DISPLAYTEMPERATURE        17
 255, // S_TEMPERATUREMAX            18
-1,   // S_BOARDTYPE                 19
 1,   // S_DISPLAYGPS                20
 0,   // S_COORDINATES               21
 1,   // S_GPSCOORDTOP               22
@@ -248,7 +257,7 @@ uint8_t EEPROM_DEFAULT[EEPROM_SETTINGS] = {
 0,   // GPStime                     37a
 0,   // GPSTZ +/-                   37b
 0,   // GPSTZ                       37c
-0,   // GPSDS                       37d
+// 0,   // GPSDS                       37d
 0,   // DEBUG                       37e
 1,   // SCROLOLING LADDERS          37f
 1,   // SHOW GIMBAL ICON            37g
@@ -286,7 +295,7 @@ static uint8_t thrExpo8;
 
 static uint16_t  MwAccSmooth[3]={0,0,0};       // Those will hold Accelerator data
 int32_t  MwAltitude=0;                         // This hold barometric value
-int32_t  old_MwAltitude=0;                         // This hold barometric value
+int32_t  old_MwAltitude=0;                     // This hold barometric value
 
 
 int MwAngle[2]={0,0};           // Those will hold Accelerator Angle
@@ -296,7 +305,7 @@ static uint16_t MwRcData[8]={   // This hold receiver pulse signal
 // for analogue / PWM sensor filtering 
 #define SENSORFILTERSIZE 8
 #define SENSORTOTAL 5
-int16_t sensorfilter[SENSORTOTAL][SENSORFILTERSIZE+1]; 
+int16_t sensorfilter[SENSORTOTAL][SENSORFILTERSIZE+2]; 
 
 uint16_t  MwSensorPresent=0;
 uint32_t  MwSensorActive=0;
@@ -306,7 +315,7 @@ int16_t MwVario=0;
 uint8_t armed=0;
 uint8_t previousarmedstatus=0;  // for statistics after disarming
 uint16_t armedangle=0;           // for capturing direction at arming
-int16_t GPS_distanceToHome=0;
+uint16_t GPS_distanceToHome=0;
 uint8_t GPS_fix=0;
 int32_t GPS_latitude;
 int32_t GPS_longitude;
@@ -315,11 +324,11 @@ uint16_t GPS_speed;
 uint16_t old_GPS_speed;
 int16_t GPS_directionToHome=0;
 uint8_t GPS_numSat=0;
-int16_t I2CError=0;
+uint16_t I2CError=0;
 uint16_t cycleTime=0;
 uint16_t pMeterSum=0;
 uint16_t MwRssi=0;
-int32_t GPS_time = 0;        //local time of coord calc - haydent
+uint32_t GPS_time = 0;        //local time of coord calc - haydent
 
 // For decoration
 uint8_t SYM_AH_DECORATION_LEFT = 0x10;
@@ -334,8 +343,8 @@ unsigned long sidebarsMillis = 0;
 unsigned long sidebaraMillis = 0;
 
 //For Current Throttle
-int LowT = 1100;
-int HighT = 1900;
+uint16_t LowT = 1100;
+uint16_t HighT = 1900;
 
 // For Time
 uint16_t onTime=0;
@@ -349,10 +358,11 @@ static int16_t MwHeading=0;
 // For Amperage
 float amperage = 0;                // its the real value x10
 float amperagesum = 0;
+uint16_t MWAmperage=0;
 
 // Rssi
-int rssi =0;
-int oldrssi;
+uint16_t rssi =0;   // uint8_t ?
+uint16_t oldrssi;   // uint8_t ?
 //int rssiADC=0;
 //int rssi_Int=0;
 
@@ -398,6 +408,7 @@ uint16_t flyingTime=0;
 #define MSP_PIDNAMES             117   //out message         the PID names
 #define MSP_WP                   118   //out message         get a WP, WP# is in the payload, returns (WP#, lat, lon, alt, flags) WP#0-home, WP#16-poshold
 #define MSP_BOXIDS               119   //out message         get the permanent IDs associated to BOXes
+#define MSP_CELLS                121   //out message         FrSky SPort Telemtry
 
 #define MSP_SET_RAW_RC           200   //in message          8 rc chan
 #define MSP_SET_RAW_GPS          201   //in message          fix, numsat, lat, lon, alt, speed
@@ -438,14 +449,14 @@ const char armed_text[] PROGMEM = " ARMED";
 
 
 // For Intro
-const char message0[] PROGMEM = "MULTIWII NG OSD - R1";
-const char message1[] PROGMEM = "VIDEO SIGNAL NTSC";
-const char message2[] PROGMEM = "VIDEO SIGNAL PAL ";
+const char message0[] PROGMEM = "MULTIWII MWOSD - R1.1";
+//const char message1[] PROGMEM = "VIDEO SIGNAL NTSC";
+//const char message2[] PROGMEM = "VIDEO SIGNAL PAL ";
 const char message5[] PROGMEM = "MW VERSION:";
 //const char message6[] PROGMEM = "MENU:THRT MIDDLE";
 //const char message7[] PROGMEM = "YAW RIGHT";
 //const char message8[] PROGMEM = "PITCH FULL";
-const char message9[] PROGMEM = "UNIQUE ID:";         // Call Sign on the beggining of the transmission   
+const char message9[] PROGMEM = "ID:";         // Call Sign on the beggining of the transmission   
 //const char message10[] PROGMEM = "TZ UTC:"; //haydent - Time Zone & DST Setting
 //const char message11[] PROGMEM = "DST:"; //haydent - Time Zone & DST Setting
 
@@ -458,6 +469,14 @@ const char configMsgPGS[] PROGMEM = "<PAGE>";
 const char configMsgMWII[] PROGMEM = "USE MWII";
 
 // For Config pages
+//-----------------------------------------------------------Page0
+const char configMsg00[] PROGMEM = "STATISTICS";
+const char configMsg01[] PROGMEM = "TOT DISTANCE";
+const char configMsg02[] PROGMEM = "MAX DISTANCE";
+const char configMsg03[] PROGMEM = "MAX ALTITUDE";
+const char configMsg04[] PROGMEM = "MAX SPEED";
+const char configMsg05[] PROGMEM = "FLY TIME";
+const char configMsg06[] PROGMEM = "MAH USED";
 //-----------------------------------------------------------Page1
 const char configMsg10[] PROGMEM = "PID CONFIG";
 const char configMsg11[] PROGMEM = "ROLL";
@@ -524,13 +543,10 @@ const char configMsg74[] PROGMEM = "DEBUG";
 const char configMsg75[] PROGMEM = "MAG CAL";
 //const char configMsg76[] PROGMEM = "TOP SHIFT";
 //-----------------------------------------------------------Page8
-const char configMsg80[] PROGMEM = "STATISTICS";
-const char configMsg81[] PROGMEM = "TRIP";
-const char configMsg82[] PROGMEM = "MAX DISTANCE";
-const char configMsg83[] PROGMEM = "MAX ALTITUDE";
-const char configMsg84[] PROGMEM = "MAX SPEED";
-const char configMsg85[] PROGMEM = "FLYING TIME";
-const char configMsg86[] PROGMEM = "AMPS DRAINED";
+const char configMsg80[] PROGMEM = "GPS TIME";
+const char configMsg81[] PROGMEM = "DISPLAY";
+const char configMsg82[] PROGMEM = "TZ FORWARD";
+const char configMsg83[] PROGMEM = "TZ ADJUST";
 
 
 // POSITION OF EACH CHARACTER OR LOGO IN THE MAX7456
@@ -540,11 +556,11 @@ const unsigned char temperatureUnitAdd[2] = {
   0x0e,0x0d};
 
 const char MultiWiiLogoL1Add[17] PROGMEM = {
-  0xd0,0xd1,0xd2,0xd3,0xd4,0xd5,0xd6,0xd7,0xd8,0xd9,0xda,0xdb,0xdc,0xdd,0xde,0};
+  0xd0,0xd1,0xd2,0xd3,0xd4,0xd5,0xd6,0xd7,0xd8,0xd9,0xda,0xdb,0xdc,0xdd,0xd5,0};
 const char MultiWiiLogoL2Add[17] PROGMEM = {
   0xe0,0xe1,0xe2,0xe3,0xe4,0xe5,0xe6,0xe7,0xe8,0xe9,0xea,0xeb,0xec,0xed,0xee,0};
 const char MultiWiiLogoL3Add[17] PROGMEM = {
-  0xf0,0xf1,0xf2,0xf3,0xf4,0xf5,0xf6,0xf7,0xf8,0xf9,0xfa,0xfb,0xfc,0xfd,0xfe,0};
+  0xf0,0xf1,0xf2,0xf3,0xd5,0xd5,0xd5,0xd5,0xd5,0xd5,0xd5,0xd5,0xd5,0xd5,0xd5,0};
 
 const unsigned char MwAltitudeAdd[2]={
   0xa7,0xa8};
@@ -554,7 +570,7 @@ const unsigned char GPS_distanceToHomeAdd[2]={
   0xbb,0xb9};
 const unsigned char MwGPSAltPositionAdd[2]={
   0xa7,0xa8};
-const char MWOSDVersionPosition = 33;
+const char MWOSDVersionPosition = 65;
 
 
 // All screen locations defines in ScreenLayout.ino
@@ -607,3 +623,4 @@ enum Positions {
 #define REQ_MSP_BOX       (1 << 11)
 #define REQ_MSP_FONT      (1 << 12)
 #define REQ_MSP_DEBUG     (1 << 13)
+#define REQ_MSP_CELLS     (1 << 14)

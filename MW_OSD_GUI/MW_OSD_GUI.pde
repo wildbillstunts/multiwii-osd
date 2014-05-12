@@ -49,7 +49,7 @@ import java.text.DecimalFormat;
 
 String MW_OSD_GUI_Version = "R1";
 
-
+int MSP_sendOrder =0;
 PImage img_Clear,OSDBackground,RadioPot;
 
 // ScreenType---------- NTSC = 0, PAL = 1 ---------------------------------
@@ -215,13 +215,13 @@ int Col1Width = 180;        int Col2Width = 200;    int Col3Width = 165;
 
 int XEEPROM    = 120;        int YEEPROM    = 5;  //hidden do not remove
 int XBoard     = 120;        int YBoard   = 5;
-int XRSSI      = 120;        int YRSSI    = 339;
-int XVREF      = 120;        int YVREF    = 465;
-int XVolts     = 120;        int YVolts    = 46;
-int XAmps      = 120;        int YAmps    = 230;
-int XVVolts    = 120;        int YVVolts  = 155;
-int XTemp      = 510;        int YTemp    = 283;
-int XCS        = 120;        int YCS    = 506;
+int XRSSI      = 120;        int YRSSI    = 317;
+int XVREF      = 120;        int YVREF    = 444;
+int XVolts     = 120;        int YVolts    = 5;
+int XAmps      = 120;        int YAmps    = 190;
+int XVVolts    = 120;        int YVVolts  = 114;
+int XTemp      = 510;        int YTemp    = 266;
+int XCS        = 120;        int YCS    = 486;
 int XGPS       = 510;        int YGPS    = 5;
 int XCOMPASS   = 510;        int YCOMPASS    = 98;
 //int XGPS       = 305;        int YGPS    = 5;
@@ -229,6 +229,7 @@ int XTIME      = 510;        int YTIME    = 190;
 //int XTIME      = 510;        int YTIME    = 5;
 int XHUD       = 305;        int YHUD     = 240;
 int XDisplay     = 305;        int YDisplay   = 114; //48;
+int XSPORT      = 510;        int YSPORT    = 353;
 
 int XOther     = 305;        int YOther   = 5; //48;
 //int XOther     = 305;        int YOther   = 150; //48;
@@ -281,6 +282,7 @@ String[] ConfigNames = {
   "Use MWii",
   
   "Display Amps",
+  "Use MWii",
   "Display mAh",
   "Use Virtual Sensor",
   "Amps Adjust",
@@ -292,7 +294,7 @@ String[] ConfigNames = {
   "Display Temperature",
   "Temperature Max",
   
-  "", // for Board type do not remove
+//  "", // for Board type do not remove
   
   "Display GPS",
   " - GPS Coords",
@@ -318,7 +320,7 @@ String[] ConfigNames = {
   "Display GPS time",
   "Time Zone +/-",
   "Time Zone offset",
-  "DST Minutes",
+//  "",
   "Debug",
   " - SB Scrolling",
   "Display Gimbal",
@@ -361,6 +363,7 @@ String[] ConfigHelp = {
   "Use MWii",
   
   "Display Amps",
+  "Use MWii",
   "Display mAh",
   "Use Virtual Sensor",
   "Amps Adjust",
@@ -372,7 +375,7 @@ String[] ConfigHelp = {
   "Display Temperature",
   "Temperature Max",
   
-  "", // for Board type do not remove
+//  "", // for Board type do not remove
   
   "Display GPS",
   " - GPS Coords",
@@ -398,7 +401,7 @@ String[] ConfigHelp = {
   "Display GPS time",
   "Time Zone +/-",
   "Time Zone offset",
-  "DST Minutes",
+//  "",
   "Debug",
   " - SB Scrolling",
   "Display Gimbal",
@@ -448,6 +451,7 @@ int[] ConfigRanges = {
 1,     // S_MAINVOLTAGE_VBAT       11
 
 1,     // S_AMPERAGE,              12
+1,     // S_MWAMPERAGE,              12a
 1,     // S_AMPER_HOUR,            13
 1,     // S_AMPERAGE_VIRTUAL,
 1023,   // S_AMPDIVIDERRATIO,      // note this is 8>>16 bit EPROM var
@@ -459,7 +463,7 @@ int[] ConfigRanges = {
 1,     // S_DISPLAYTEMPERATURE     17
 255,   // S_TEMPERATUREMAX         18
 
-1,     // S_BOARDTYPE              19
+//1,     // S_BOARDTYPE              19
 
 1,     // S_DISPLAYGPS             20
 1,     // S_COORDINATES            21
@@ -485,7 +489,7 @@ int[] ConfigRanges = {
 1,     // GPStime                  37a
 1,     // GPSTZ +/-                37b
 13,    // GPSTZ                    37c
-60,    // GPSDS                    37d
+//60,    // GPSDS                    37d
 1,     // Debug                    37e
 1,     // S_SCROLLING              37f
 1,     // S_GIMBAL                 37g
@@ -554,7 +558,7 @@ Textlabel FileUploadText, TXText, RXText;
 // textlabels -------------------------------------------------------------------------------------------------------------
 
 // Buttons------------------------------------------------------------------------------------------------------------------
-Button buttonIMPORT,buttonSAVE,buttonREAD,buttonRESET,buttonWRITE,buttonRESTART;
+Button buttonIMPORT,buttonSAVE,buttonREAD,buttonRESET,buttonWRITE,buttonRESTART, buttonGPSTIMELINK, buttonSPORTLINK;
 // Buttons------------------------------------------------------------------------------------------------------------------
 
 // Toggles------------------------------------------------------------------------------------------------------------------
@@ -592,8 +596,8 @@ Group MGUploadF,
   G_VREF,
   G_HUD,
   G_COMPASS,
-  G_DISPLAY
-  
+  G_DISPLAY,
+  G_SPORT  
   ;
 
 // Timers --------------------------------------------------------------------------------------------------------------------
@@ -682,8 +686,8 @@ OSDBackground = loadImage("Background.jpg");
   buttonIMPORT = controlP5.addButton("bIMPORT",1,50,45,40,19); buttonIMPORT.setLabel("LOAD"); buttonIMPORT.setColorBackground(red_); 
   
   buttonREAD = controlP5.addButton("READ",1,XControlBox+30,YControlBox+25,45,16);buttonREAD.setColorBackground(red_);
-  buttonRESET = controlP5.addButton("RESET",1,XControlBox+30,YControlBox+50,45,16);buttonRESET.setColorBackground(red_);
-  buttonWRITE = controlP5.addButton("WRITE",1,XControlBox+30,YControlBox+75,45,16);buttonWRITE.setColorBackground(red_);
+  buttonWRITE = controlP5.addButton("WRITE",1,XControlBox+30,YControlBox+50,45,16);buttonWRITE.setColorBackground(red_);
+  buttonRESET = controlP5.addButton("DEFAULT",1,XControlBox+25,YControlBox+75,55,16);buttonRESET.setColorBackground(red_);
   buttonRESTART = controlP5.addButton("RESTART",1,XControlBox+25,YControlBox+100,55,16);buttonRESTART.setColorBackground(red_);
     
     
@@ -714,6 +718,7 @@ CreateItem(GetSetting("S_VOLTAGEMIN"), 5,4*17, G_Voltage);
 
 // Amperage  ------------------------------------------------------------------------
 CreateItem(GetSetting("S_AMPERAGE"),  5,0, G_Amperage);
+CreateItem(GetSetting("S_MWAMPERAGE"),  5,5*17, G_Amperage);
 CreateItem(GetSetting("S_AMPER_HOUR"),  5,1*17, G_Amperage);
 CreateItem(GetSetting("S_AMPERAGE_VIRTUAL"),  5,2*17, G_Amperage);
 CreateItem(GetSetting("S_AMPDIVIDERRATIO"),  5,3*17, G_Amperage);
@@ -732,8 +737,8 @@ CreateItem(GetSetting("S_TEMPERATUREMAX"),  5,1*17, G_Temperature);
 CreateItem(GetSetting("S_DEBUG"),  5,0, G_Debug);
 
 //  Board ---------------------------------------------------------------------------
-CreateItem(GetSetting("S_BOARDTYPE"),  5,0, G_Board);
-BuildRadioButton(GetSetting("S_BOARDTYPE"),  5,0, G_Board, "Rush","Minim");
+//CreateItem(GetSetting("S_BOARDTYPE"),  5,0, G_Board);
+//BuildRadioButton(GetSetting("S_BOARDTYPE"),  5,0, G_Board, "Rush","Minim");
 
 
 //  GPS  ----------------------------------------------------------------------------
@@ -783,8 +788,15 @@ CreateItem(GetSetting("S_GPSTZ"),  5,1*17, G_TIME);
   confItem[GetSetting("S_GPSTZ")].setMultiplier(0.5);//30min increments, kathmandu would require 15min, it can use DST 
   confItem[GetSetting("S_GPSTZ")].setDecimalPrecision(1);
 CreateItem(GetSetting("S_GPSTZAHEAD"),  5,2*17, G_TIME);
-CreateItem(GetSetting("S_GPSDS"),  5,3*17, G_TIME);
-   confItem[GetSetting("S_GPSDS")].setMultiplier(15);
+
+buttonGPSTIMELINK = controlP5.addButton("GPSTIMELINK",1, 20,3*17,130,16);
+buttonGPSTIMELINK.setGroup(G_TIME);
+buttonGPSTIMELINK.setCaptionLabel("View Requirements");
+
+//  SPORT  ----------------------------------------------------------------------------
+buttonSPORTLINK = controlP5.addButton("SPORTLINK",1, 20,3,130,16);
+buttonSPORTLINK.setGroup(G_SPORT);
+buttonSPORTLINK.setCaptionLabel("View Requirements");
 
 //  Call Sign ---------------------------------------------------------------------------
 CreateItem(GetSetting("S_DISPLAY_CS"),  5,0, G_CallSign);
@@ -981,6 +993,19 @@ void draw() {
     MakePorts();
     MWData_Com();
     if (!FontMode) PortRead = false;
+  }
+
+  //PortWrite = false;
+  if ((SendSim ==1) && (ClosePort == false)) 
+
+// OLD SKOOL
+/*
+{
+    //time2 = time;
+    PortRead = true;
+    MakePorts();
+    MWData_Com();
+    if (!FontMode) PortRead = false;
     
   }
   
@@ -1022,18 +1047,91 @@ void draw() {
       //PortWrite = false;
     }
   }
-  else
+
+*/
+// PatrikE
   {
-    if (!FontMode) PortWrite = false; 
+    //PortWrite = true;
+    //MakePorts();
+
+
+    if (!FontMode) {
+
+      if (init_com==1) {
+        if (ClosePort) return;
+
+        if ((time-time5 >50000) && (toggleMSP_Data == false)) {
+          time5 = time;
+          if (init_com==1) {
+            SendCommand(MSP_BOXNAMES);
+            SendCommand(MSP_BOXIDS);
+          }
+        }
+
+        MSP_sendOrder++;
+        switch(MSP_sendOrder) {
+        case 1:
+          if (init_com==1)SendCommand(MSP_ANALOG);
+          if (init_com==1)SendCommand(MSP_COMP_GPS); 
+          break;
+        case 2:
+          if (init_com==1)SendCommand(MSP_STATUS);
+          break;
+        case 3:
+          if (init_com==1)SendCommand(MSP_RC);
+          break;
+        case 4:
+          if (init_com==1)SendCommand(MSP_RAW_GPS);
+          break;
+        case 5:
+          PortWrite = !PortWrite;      
+          if (init_com==1)SendCommand(MSP_ATTITUDE);
+          if (init_com==1)SendCommand(MSP_ALTITUDE);
+          break;
+        case 6: 
+          if (init_com==1)SendCommand(MSP_RC);
+          if(time-time5 < 10000)MSP_sendOrder=0;
+          break;
+        case 7: 
+          if (toggleMSP_Data == true && (time-time5 < 5000)) MSP_sendOrder=0;
+          if (toggleMSP_Data == false) SendCommand(MSP_BOXNAMES);
+          break;
+        case 8:
+          time5 = time;
+          if (toggleMSP_Data == false) SendCommand(MSP_BOXIDS);
+          MSP_sendOrder=0;
+          break;
+        case 9:
+          break;
+        case 10:
+          break;
+        case 11:
+          break;
+        }
+// Unused timers.        
+//        if ((time-time4 >200)) {
+//          time4 = time; 
+//          //PortWrite = !PortWrite;
+//          //MakePorts();
+//        }
+//
+//        if ((time-time1 >40)) {
+//          time1 = time; 
+//          //PortWrite = false;
+//        }
+
+      }
+    } // End !FontMode
   }
 
+  else
+  {
+    if (!FontMode) PortWrite = false;
+  }
 
-  
-  
-  if ((FontMode) && (time-time2 >100)){
+  if ((FontMode) && (time-time2 >100)) {
     SendChar();
-   }
-    
+  }
     
   MakePorts();  
   
@@ -1671,4 +1769,11 @@ void SketchUploader(){
   super.exit();
 }
 
+
+public void GPSTIMELINK(){
+ link("http://code.google.com/p/scarab-osd/wiki/GPS_Time"); 
+}
+public void SPORTLINK(){
+ link("http://code.google.com/p/scarab-osd/wiki/Frsky_SPort"); 
+}
 
