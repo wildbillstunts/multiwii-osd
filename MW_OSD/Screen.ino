@@ -1323,7 +1323,7 @@ void displayDebug(void)
 }
 
 void displayCells(void){
-#if defined SPORT_CELLS
+
   #ifndef MIN_CELL
     #define MIN_CELL 300
   #endif
@@ -1376,10 +1376,10 @@ Suggestion to replace below?
       
     }
     
-      if(cells){
+    if(cells){
         screenBuffer[cells] = 0;       
         MAX7456_WriteString(screenBuffer,getPosition(MwAltitudePosition)+(2*LINE)-1+(6-cells));//bar chart
-      }
+    
 
       ItoaPadded(low, screenBuffer+1,4,2);
       screenBuffer[0] = SYM_MIN;
@@ -1399,5 +1399,6 @@ Suggestion to replace below?
     
     if((avg>MIN_CELL)||(timer.Blink2hz))
           MAX7456_WriteString(screenBuffer,getPosition(MwAltitudePosition)+(4*LINE)-1);//average     
-#endif 
+  }
+  
 }
