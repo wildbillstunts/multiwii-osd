@@ -70,11 +70,10 @@ void setup()
 
   MAX7456Setup();
  
-#ifdef ADC_1V1_REF
-    analogReference(INTERNAL);
-#else
+  if (Settings[S_VREFERENCE])
     analogReference(DEFAULT);
-#endif
+  else
+    analogReference(INTERNAL);
 
   setMspRequests();
   blankserialRequest(MSP_IDENT);
@@ -216,11 +215,9 @@ void loop()
        case REQ_MSP_FONT:
          MSPcmdsend = MSP_OSD;
          break;
-#ifdef DEBUG         
        case REQ_MSP_DEBUG:
          MSPcmdsend = MSP_DEBUG;
          break;
-#endif         
        case REQ_MSP_CELLS:
          MSPcmdsend = MSP_CELLS;
          break;
@@ -371,14 +368,13 @@ void loop()
 
 
 void calculateTrip(void)
-{  static float tripSum = 0; 
+{
   if(GPS_fix && armed && (GPS_speed>0)) {
     if(Settings[S_UNITSYSTEM])
-      tripSum += GPS_speed *0.0016404;     //  50/(100*1000)*3.2808=0.0016404     cm/sec ---> ft/50msec
+      trip += GPS_speed *0.0016404;     //  50/(100*1000)*3.2808=0.0016404     cm/sec ---> ft/50msec
     else
-      tripSum += GPS_speed *0.0005;        //  50/(100*1000)=0.0005               cm/sec ---> mt/50msec (trip var is float)      
+      trip += GPS_speed *0.0005;        //  50/(100*1000)=0.0005               cm/sec ---> mt/50msec (trip var is float)      
   }
-  trip = (int) tripSum;
 }
 
 
@@ -584,20 +580,22 @@ void ProcessSensors(void) {
 //-------------- Voltage
   if (!Settings[S_MAINVOLTAGE_VBAT]){ // not MWII
     uint16_t voltageRaw = sensorfilter[0][SENSORFILTERSIZE];
-#ifdef ADC_1V1_REF
+    if (!Settings[S_VREFERENCE]){
       voltage = float(voltageRaw) * Settings[S_DIVIDERRATIO] * (0.0001);  
-#else
+    }
+    else {
       voltage = float(voltageRaw) * Settings[S_DIVIDERRATIO] * (0.0005);     
-#endif
+    }
   }
 
   if (!Settings[S_VIDVOLTAGE_VBAT]) {
     uint16_t vidvoltageRaw = sensorfilter[1][SENSORFILTERSIZE];
-#ifdef ADC_1V1_REF
+    if (!Settings[S_VREFERENCE]){
       vidvoltage = float(vidvoltageRaw) * Settings[S_VIDDIVIDERRATIO] * (0.0001);
-#else
+    }
+    else {
       vidvoltage = float(vidvoltageRaw) * Settings[S_VIDDIVIDERRATIO] * (0.0005);
-#endif
+    }
   }
 
 //-------------- Temperature

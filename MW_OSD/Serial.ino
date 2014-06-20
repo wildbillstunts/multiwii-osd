@@ -99,8 +99,8 @@ void serialMSPCheck()
 
   if (cmdMSP==MSP_STATUS)
   {
-    read16();//cycleTime=read16();
-    read16();//I2CError=read16();
+    cycleTime=read16();
+    I2CError=read16();
     MwSensorPresent = read16();
     MwSensorActive = read32();
     armed = (MwSensorActive & mode.armed) != 0;
@@ -490,8 +490,9 @@ void serialMenuCommon()
 	    Settings[S_VIDEOSIGNALTYPE]=!Settings[S_VIDEOSIGNALTYPE];
 	    MAX7456Setup();
 	    }
-	  if(ROW==3) Settings[S_DEBUG]=!Settings[S_DEBUG];
-	  if(ROW==4) timer.magCalibrationTimer=CALIBRATION_DELAY;
+	  if(ROW==3) Settings[S_VREFERENCE]=!Settings[S_VREFERENCE];
+	  if(ROW==4) Settings[S_DEBUG]=!Settings[S_DEBUG];
+	  if(ROW==5) timer.magCalibrationTimer=CALIBRATION_DELAY;
 	}
 	if(configPage == 8 && COL == 3) {
 	  if(ROW==1) Settings[S_GPSTIME]=!Settings[S_GPSTIME];
