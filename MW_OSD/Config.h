@@ -8,7 +8,8 @@
 #define AMPERAGEMAX     500         // Size of current sensor * 10 e.g. 50A sensor = 500
 #define AMPERAGEOFFSET  0           // Optional extra for high offset sensors not supported in GUI (typically bidirectional sensors use a value of 256-512) 
 //#define STAGE2FILTER              // Optional experimental 2nd stage filter for all ADC and PWM RSSI. Enable for smoother readings. Memory intensive
-//#define SMOOTHFILTER              // Alternative 2nd stage filter for all ADC and PWM RSSI. Enable for smoothest readings.
+//#define SMOOTHFILTER                // Alternative 2nd stage filter for all ADC and PWM RSSI. Enable for smoothest readings.
+//#define ADC_1V1_REF              //1.1V or 5V ADC Reference, Be cautious commenting this out, ie enabling 1.1V REF if you are putting more than that into a Analog Pin
 
 
 /********************       CONTROLLER settings      *********************/

@@ -324,8 +324,8 @@ uint16_t GPS_speed;
 uint16_t old_GPS_speed;
 int16_t GPS_directionToHome=0;
 uint8_t GPS_numSat=0;
-uint16_t I2CError=0;
-uint16_t cycleTime=0;
+//uint16_t I2CError=0;
+//uint16_t cycleTime=0;
 uint16_t pMeterSum=0;
 uint16_t MwRssi=0;
 uint32_t GPS_time = 0;        //local time of coord calc - haydent
@@ -379,7 +379,7 @@ int16_t temperature=0;                  // temperature in degrees Centigrade
 uint16_t speedMAX=0;
 int16_t altitudeMAX=0;
 int16_t distanceMAX=0;
-float trip=0;
+int trip=0;
 uint16_t flyingTime=0; 
 
 
@@ -426,9 +426,10 @@ uint16_t flyingTime=0;
 #define MSP_BIND                 240   //in message          no param
 
 #define MSP_EEPROM_WRITE         250   //in message          no param
-
+#ifdef DEBUG
 #define MSP_DEBUGMSG             253   //out message         debug string buffer
 #define MSP_DEBUG                254   //out message         debug1,debug2,debug3,debug4
+#endif
 // End of imported defines from Multiwii Serial Protocol MultiWii_shared svn r1333
 // ---------------------------------------------------------------------------------------
 
