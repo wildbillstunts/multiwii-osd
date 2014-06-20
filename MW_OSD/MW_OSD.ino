@@ -314,9 +314,7 @@ void loop()
         }
         displayMode();       
         displayDebug();
-#ifdef SPORT        
         if(MwSensorPresent)displayCells();
-#endif
       }
     }
   }  // End of fast Timed Service Routine (50ms loop)
