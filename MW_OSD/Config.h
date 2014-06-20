@@ -35,6 +35,7 @@
 //To show amperage from s.port, enable "Use MWii" under Amperage in GUI
 //more details: http://code.google.com/p/scarab-osd/wiki/Frsky_SPort
 
+#define SPORT           // Enable/disable FRSKY S.PORT cells code to free memory
 #define MIN_CELL 320 //Cell Low Flash - No decimal, 3 Digits ie 320 = 3.20v
 
 /********************       Display Settings         ************************/
