@@ -12,6 +12,8 @@ int mode_baro = 0;
 int mode_mag = 0;
 int mode_gpshome = 0;
 int mode_gpshold = 0;
+int mode_gpsmission = 0;
+int mode_gpsland = 0;
 int mode_llights = 0;
 int mode_camstab = 0;
 int mode_osd_switch = 0;
@@ -21,11 +23,11 @@ int SendSim = 0;
 boolean[] keys = new boolean[526];
 boolean armed = false;
 
-Group SG,SGControlBox,SGModes,SGAtitude,SGRadio,SGSensors1,SGGPS; 
+Group SG,SGControlBox,SGModes,SGAtitude,SGRadio,SGSensors1,SGGPS,SGFRSKY; 
 
 // Checkboxs
 CheckBox checkboxSimItem[] = new CheckBox[SIMITEMS] ;
-CheckBox ShowSimBackground, UnlockControls, SGPS_FIX;
+CheckBox ShowSimBackground, UnlockControls, SGPS_FIX,SFRSKY;
 //Toggles
 Toggle toggleModeItems[] = new Toggle[boxnames.length] ;
 Toggle SimControlToggle;
@@ -50,6 +52,7 @@ Numberbox SGPS_numSat, SGPS_altitude, SGPS_speed, SGPS_ground_course,SGPS_distan
 
 //CheckBox checkboxModeItems[] = new CheckBox[boxnames.length] ;
 DecimalFormat OnePlaceDecimal = new DecimalFormat("0.0");
+DecimalFormat TwoPlaceDecimal = new DecimalFormat("0.00");
 
 
 
@@ -60,12 +63,12 @@ void SimSetup(){
  
 
   SG = ScontrolP5.addGroup("SG")
-    .setPosition(305,YSim + 38)
+    .setPosition(305,YSim + 44)
     .setWidth(733)
     .setBarHeight(13)
     .activateEvent(true)
     .disableCollapse()
-    .setBackgroundColor(color(0,255))
+//    .setBackgroundColor(color(0,255))
     .setBackgroundHeight(192)
    .setLabel("Simulator")
    .setMoveable(true);
@@ -73,7 +76,7 @@ void SimSetup(){
                 
  
   SGModes = ScontrolP5.addGroup("SGModes")
-                .setPosition(629,25)
+                .setPosition(632,18)
                 .setWidth(100)
                 .setBarHeight(15)
                 .activateEvent(true)
@@ -87,7 +90,7 @@ void SimSetup(){
                ; 
                
   SGAtitude = ScontrolP5.addGroup("SGAtitude")
-                .setPosition(525,25)
+                .setPosition(525,18)
                 .setWidth(100)
                 .setBarHeight(15)
                 .activateEvent(true)
@@ -100,7 +103,7 @@ void SimSetup(){
                ;
                
  SGRadio = ScontrolP5.addGroup("SGRadio")
-                .setPosition(391,25)
+                .setPosition(388,18)
                 .setWidth(130)
                 .setBarHeight(15)
                 .activateEvent(true)
@@ -113,7 +116,7 @@ void SimSetup(){
                ; 
 
 SGSensors1 = ScontrolP5.addGroup("SGSensors1")
-                .setPosition(5,25)
+                .setPosition(0,18)
                 .setWidth(175)
                 .setBarHeight(15)
                 .activateEvent(true)
@@ -125,20 +128,33 @@ SGSensors1 = ScontrolP5.addGroup("SGSensors1")
                 //.close() 
                ;                                  
 SGGPS = ScontrolP5.addGroup("SGGPS")
-                .setPosition(186,25)
+                .setPosition(182,18)
                 .setWidth(200)
                 .setBarHeight(15)
                 .activateEvent(true)
                 .disableCollapse()
                 .setBackgroundColor(color(30,255))
-                .setBackgroundHeight(111)
+                .setBackgroundHeight(110)
                 .setLabel("GPS")
                 .setGroup(SG)
                 //.close() 
                ;
 
+SGFRSKY = ScontrolP5.addGroup("SGFRSKY")
+                .setPosition(182,145)
+                .setWidth(200)
+                .setBarHeight(15)
+                .activateEvent(true)
+                .disableCollapse()
+                .setBackgroundColor(color(30,255))
+                .setBackgroundHeight(33)
+                .setLabel("FRSKY")
+                .setGroup(SG)
+                //.close() 
+               ;   
+
 SGControlBox = ScontrolP5.addGroup("SGControlBox")
-                .setPosition(5,150)
+                .setPosition(0,145)
                 .setWidth(175)
                 .setBarHeight(15)
                 .activateEvent(true)
@@ -150,6 +166,8 @@ SGControlBox = ScontrolP5.addGroup("SGControlBox")
                 //.close() 
                ;   
 
+
+
 SimControlToggle = (controlP5.Toggle) hideLabel(controlP5.addToggle("SendSim"));
 SimControlToggle.setPosition(5,5);
 SimControlToggle.setSize(35,10);
@@ -159,7 +177,14 @@ SimControlToggle.setValue(1);
 
 SimControlText = controlP5.addTextlabel("SimControlText","Simulate on OSD",45,3);
 SimControlText.setGroup(SGControlBox);
+
                
+SFRSKY =  ScontrolP5.addCheckBox("SFRSKY",5,5);
+    SFRSKY.setColorBackground(color(120));
+    SFRSKY.setColorActive(color(255));
+    SFRSKY.addItem("Simulate FRSKY cells",1);
+    SFRSKY.setGroup(SGFRSKY);
+//    SFRSKY.activate(0);
 
 SGPS_FIX =  ScontrolP5.addCheckBox("GPS_FIX",5,5);
     SGPS_FIX.setColorBackground(color(120));
@@ -214,7 +239,7 @@ SGPS_altitude = ScontrolP5.addNumberbox("SGPS_altitude",0,5,40,40,14);
     SGPS_distanceToHome.setMax(1000);
     SGPS_distanceToHome.setDecimalPrecision(0);
     SGPS_distanceToHome.setGroup(SGGPS); 
-    SGPS_distanceToHome.setValue(500);
+    SGPS_distanceToHome.setValue(350);
  ScontrolP5.getController("SGPS_distanceToHome").getCaptionLabel()
    .align(ControlP5.LEFT, ControlP5.RIGHT_OUTSIDE).setPaddingX(45);   
                  
@@ -250,7 +275,7 @@ SGPS_altitude = ScontrolP5.addNumberbox("SGPS_altitude",0,5,40,40,14);
  
  HeadingKnob = ScontrolP5.addKnob("MwHeading")
    .setRange(-180,+180)
-   .setValue(-90)
+   .setValue(0)
    .setPosition(25,80)
    .setRadius(25)
    .setLabel("Heading")
@@ -341,11 +366,11 @@ s_Vario = ScontrolP5.addSlider("sVario")
 s_VBat = ScontrolP5.addSlider("sVBat")
   .setPosition(90,10)
   .setSize(8,75)
-  .setRange(9,17)
+  .setRange(9,26)
   .setValue(0)
   .setLabel("VBat")
   .setDecimalPrecision(1)
-  .setValue(16.2)
+  .setValue(15.0)
   .setGroup(SGSensors1);
   ScontrolP5.getController("sVBat").getValueLabel()
      .setFont(font9);
@@ -374,11 +399,11 @@ s_MRSSI = ScontrolP5.addSlider("sMRSSI")
 
   for(int i=0;i<boxnames.length ;i++) {
     toggleModeItems[i] = (controlP5.Toggle) hideLabel(ScontrolP5.addToggle("toggleModeItems"+i,false));
-    toggleModeItems[i].setPosition(5,3+i*17);
+    toggleModeItems[i].setPosition(5,3+i*16);
     toggleModeItems[i].setSize(10,10);
     //toggleConfItem[i].setMode(ControlP5.SWITCH);
     toggleModeItems[i].setGroup(SGModes);
-    txtlblModeItems[i] = controlP5.addTextlabel("ModeItems"+i,boxnames[i].substring(0, boxnames[i].length()-1) ,20,i*17);
+    txtlblModeItems[i] = controlP5.addTextlabel("ModeItems"+i,boxnames[i].substring(0, boxnames[i].length()-1) ,20,i*16);
     txtlblModeItems[i].setGroup(SGModes);
   }
  
@@ -442,41 +467,42 @@ String RightPadd(int inInt,int Places){
 void ShowVolts(float voltage){  
   if(confItem[GetSetting("S_DISPLAYVOLTAGE")].value() > 0) {
 String output = OnePlaceDecimal.format(voltage);
-  mapchar(0x97, voltagePosition[ScreenType]);
-  makeText(output, voltagePosition[ScreenType]+2);
+  mapchar(0x97, SimPosn[voltagePosition]);
+  makeText(output, SimPosn[voltagePosition]+1);
   }}
 
 void ShowVideoVolts(float voltage){  
   if(confItem[GetSetting("S_VIDVOLTAGE")].value() > 0) {
 String output = OnePlaceDecimal.format(voltage);
-  mapchar(0xBF, voltagePosition[ScreenType]-LINE-LINE);
-  makeText(output, voltagePosition[ScreenType]+2-LINE-LINE);
+  mapchar(0xBF, SimPosn[vidvoltagePosition]);
+  makeText(output, SimPosn[vidvoltagePosition]+1);
   }}
 
 
 void ShowFlyTime(String FMinutes_Seconds){
 
   if (int(confItem[GetSetting("S_TIMER")].value()) > 0){
-  mapchar(0x9c, flyTimePosition[ScreenType]);
-  makeText(FMinutes_Seconds, flyTimePosition[ScreenType]+1);
+  mapchar(0x9c, SimPosn[flyTimePosition]);
+  makeText(FMinutes_Seconds, SimPosn[flyTimePosition]+1);
 }}
 
-//void ShowOnTime(String Minutes_Seconds){
-  //mapchar(0x9b, onTimePosition[ScreenType]);
-  //makeText(Minutes_Seconds, onTimePosition[ScreenType]+1);
-//}
+void ShowOnTime(String Minutes_Seconds){
+  if (int(confItem[GetSetting("S_TIMER")].value()) > 0){
+  mapchar(0x9b, SimPosn[onTimePosition]);
+  makeText(Minutes_Seconds, SimPosn[onTimePosition]+1);
+  }}
 
 void ShowCurrentThrottlePosition(){
   if(confItem[GetSetting("S_THROTTLEPOSITION")].value() > 0) {
-  mapchar(0xc8, CurrentThrottlePosition[ScreenType]);
+  mapchar(0xc8, SimPosn[CurrentThrottlePosition]);
   
   if(armed){
     int CurThrottle = int(map(Throttle_Yaw.arrayValue()[1],1000,2000,0,100));
-    makeText(RightPadd(CurThrottle,3) + "%", CurrentThrottlePosition[ScreenType]+1);   
+    makeText(RightPadd(CurThrottle,3) + "%", SimPosn[CurrentThrottlePosition]+1);   
   }
   else
   {
-    makeText(" --", CurrentThrottlePosition[ScreenType]+1);
+    makeText("  --", SimPosn[CurrentThrottlePosition]+1);
   }
 
   
@@ -490,16 +516,16 @@ void ShowCurrentThrottlePosition(){
 void ShowLatLon(){
   if(confItem[GetSetting("S_COORDINATES")].value() > 0) {
   if(confItem[GetSetting("S_GPSCOORDTOP")].value() > 0) {
-  mapchar(0xca, MwGPSLatPosition[ScreenType]);
-  makeText(" 43.09486N", MwGPSLatPosition[ScreenType]+1);
-  mapchar(0xcb, MwGPSLonPosition[ScreenType]);
-  makeText(" 71.88970W", MwGPSLonPosition[ScreenType]+1);
+  mapchar(0xca, SimPosn[MwGPSLatPositionTop]);
+  makeText(" 43.09486N", SimPosn[MwGPSLatPositionTop]+1);
+  mapchar(0xcb, SimPosn[MwGPSLonPositionTop]);
+  makeText(" 71.88970W", SimPosn[MwGPSLonPositionTop]+1);
   }
   else {
-  mapchar(0xca, MwGPSMidLatPosition[ScreenType]);
-  makeText(" 43.09486N", MwGPSMidLatPosition[ScreenType]+1);
-  mapchar(0xcb, MwGPSMidLonPosition[ScreenType]);
-  makeText(" 71.88970W", MwGPSMidLonPosition[ScreenType]+1);
+  mapchar(0xca, SimPosn[MwGPSLatPosition]);
+  makeText(" 43.09486N", SimPosn[MwGPSLatPosition]+1);
+  mapchar(0xcb, SimPosn[MwGPSLonPosition]);
+  makeText(" 71.88970W", SimPosn[MwGPSLonPosition]+1);
 
   }
 }
@@ -507,114 +533,174 @@ void ShowLatLon(){
 
 void ShowDebug(){
   if(confItem[GetSetting("S_DEBUG")].value() > 0) {
-  makeText("0:    000", debugPosition[ScreenType]);
-  makeText("1:    001", debugPosition[ScreenType]+LINE);
-  makeText("2:    010", debugPosition[ScreenType]+LINE+LINE);
-//  makeText("3:    011", debugPosition[ScreenType]+LINE+LINE+LINE);
+  makeText("0:    000", SimPosn[debugPosition]);
+  makeText("1:    001", SimPosn[debugPosition]+LINE);
+  makeText("2:    010", SimPosn[debugPosition]+LINE+LINE);
+//  makeText("3:    011", SimPosn[debugPosition]+LINE+LINE+LINE);
+
+
+
 }}
 
 
 void ShowSats(){
   String output = str(int(SGPS_numSat.getValue()));
-  mapchar(0x1e, GPS_numSatPosition[ScreenType]);
-  mapchar(0x1f, GPS_numSatPosition[ScreenType]+1);
-  makeText(output, GPS_numSatPosition[ScreenType]+2);
+  mapchar(0x1e, SimPosn[GPS_numSatPosition]);
+  mapchar(0x1f, SimPosn[GPS_numSatPosition]+1);
+  makeText(output, SimPosn[GPS_numSatPosition]+2);
 }
 
 void ShowSpeed(){
   String output = str(int(SGPS_speed.getValue()/27.7778));
-  if(confItem[GetSetting("S_UNITSYSTEM")].value() > 0) {mapchar(0xa6, GPS_speedPosition[ScreenType]);}
-  else {mapchar(0xa5, GPS_speedPosition[ScreenType]);}
-  makeText(output, GPS_speedPosition[ScreenType]+1);
+  if(confItem[GetSetting("S_UNITSYSTEM")].value() > 0) {mapchar(0xa6, SimPosn[speedPosition]);}
+  else {mapchar(0xa5, SimPosn[speedPosition]);}
+  makeText(output, SimPosn[speedPosition]+1);
 }
 
 void ShowDirection(){
-  mapchar(0x68, GPS_directionToHomePosition[ScreenType]);
+  int dirhome=0x60 + ((180+360+22+MwHeading-int(SGPSHeadHome.value()))%360)*2/45;
+ 
+  mapchar(dirhome, SimPosn[GPS_directionToHomePosition]);
 }
 
 void ShowGPSAltitude(){
   String output = str(int(SGPS_altitude.getValue())/100);
   if(confItem[GetSetting("S_GPSALTITUDE")].value() > 0) {
-  if(confItem[GetSetting("S_UNITSYSTEM")].value() > 0) {mapchar(0xa8, MwGPSAltPosition[ScreenType]);}
-  else {mapchar(0xa7, MwGPSAltPosition[ScreenType]);}
-  makeText(output, MwGPSAltPosition[ScreenType]+1);
+  if(confItem[GetSetting("S_UNITSYSTEM")].value() > 0) {mapchar(0xa8, SimPosn[MwGPSAltPosition]);}
+  else {mapchar(0xa7, SimPosn[MwGPSAltPosition]);}
+  makeText(output, SimPosn[MwGPSAltPosition]+1);
 }}
 
 
 void ShownAngletohome(){
-  String output = str(int(SGPSHeadHome.getValue())/1);
+  String output = str((360+int(SGPSHeadHome.getValue()))%360/1);
   if(confItem[GetSetting("S_ANGLETOHOME")].value() > 0) {
   
 
   switch (output.length())
   {
   case 1:
-makeText(output, GPS_angleToHomePosition[ScreenType]+2);
+makeText(output, SimPosn[GPS_angleToHomePosition]+2);
 break;
   case 2:
-makeText(output, GPS_angleToHomePosition[ScreenType]+1);
+makeText(output, SimPosn[GPS_angleToHomePosition]+1);
 break;
   case 3:
-makeText(output, GPS_angleToHomePosition[ScreenType]);
+makeText(output, SimPosn[GPS_angleToHomePosition]);
 break;
 case 4:
-makeText(output, GPS_angleToHomePosition[ScreenType]-1);
+makeText(output, SimPosn[GPS_angleToHomePosition]-1);
 break;
 }
- mapchar(0xbd, GPS_angleToHomePosition[ScreenType]+3); 
+ mapchar(0xbd, SimPosn[GPS_angleToHomePosition]+3); 
 
   }}
 
 void ShowAltitude(){
   String output = str(int(s_Altitude.getValue()));
   if(confItem[GetSetting("S_BAROALT")].value() > 0) {
-  if(confItem[GetSetting("S_UNITSYSTEM")].value() > 0) {mapchar(0xa8, MwAltitudePosition[ScreenType]);}
-  else {mapchar(0xa7, MwAltitudePosition[ScreenType]);}
-  makeText(output, MwAltitudePosition[ScreenType]+1);
+  if(confItem[GetSetting("S_UNITSYSTEM")].value() > 0) {mapchar(0xa8, SimPosn[MwAltitudePosition]);}
+  else {mapchar(0xa7, SimPosn[MwAltitudePosition]);}
+  makeText(output, SimPosn[MwAltitudePosition]+1);
   }}
 
 void ShowDistance(){
   String output = str(int(SGPS_distanceToHome.getValue()));
-  if(confItem[GetSetting("S_UNITSYSTEM")].value() > 0) {mapchar(0xb9, GPS_distanceToHomePosition[ScreenType]);}
-  else {mapchar(0xbb, GPS_distanceToHomePosition[ScreenType]);}
-  makeText(output, GPS_distanceToHomePosition[ScreenType]+1);
+  if(confItem[GetSetting("S_UNITSYSTEM")].value() > 0) {mapchar(0xb9, SimPosn[GPS_distanceToHomePosition]);}
+  else {mapchar(0xbb, SimPosn[GPS_distanceToHomePosition]);}
+  makeText(output, SimPosn[GPS_distanceToHomePosition]+1);
   }
 
 void ShowVario(){
   if(confItem[GetSetting("S_VARIO")].value() > 0) {
-  mapchar(0x7f, MwAltitudePosition[ScreenType]-1-LINE);
-  mapchar(0x8c, MwAltitudePosition[ScreenType]-1);
-  mapchar(0x7f, MwAltitudePosition[ScreenType]-1+LINE);
+  mapchar(0x7f, SimPosn[MwClimbRatePosition]-LINE);
+  mapchar(0x8c, SimPosn[MwClimbRatePosition]);
+  mapchar(0x7f, SimPosn[MwClimbRatePosition]+LINE);
 }}
 
 void ShowRSSI(){
   String output = str(int(s_MRSSI.getValue()));
   if(confItem[GetSetting("S_DISPLAYRSSI")].value() > 0) {
-  mapchar(0xba, rssiPosition[ScreenType]);
-  makeText(output, rssiPosition[ScreenType]+1);
+  mapchar(0xba, SimPosn[rssiPosition]);
+  makeText(output + "%", SimPosn[rssiPosition]+1);
 }}
+
+void ShowAPstatus(){
+   if (SimPosn[APstatusPosition]==0x3FF)
+      return;
+
+  String output="";
+  int SimModebits = 0;
+  int SimBitCounter = 1;
+    for (int i=0; i<boxnames.length; i++) {
+      if(toggleModeItems[i].getValue() > 0) SimModebits |= SimBitCounter;
+      SimBitCounter += SimBitCounter;
+}
+  if((SimModebits&mode_gpshome) >0){
+  output = "AUTO RTH";
+    }
+  else if((SimModebits&mode_gpshold) >0){
+  output = "AUTO HOLD";
+  }
+  else if((SimModebits&mode_gpsmission) >0){
+  output = " MISSION";
+  }
+  else if((SimModebits&mode_gpsland) >0){
+  output = "AUTO LAND";
+  }
+  makeText(output, SimPosn[APstatusPosition]);
+}
+
 
 void ShowAmperage(){
   if(confItem[GetSetting("S_AMPER_HOUR")].value() > 0) {
-  mapchar(0xa4, amperagePosition[ScreenType]-1);
-  makeText("1221", amperagePosition[ScreenType]);
+  mapchar(0xa4, SimPosn[pMeterSumPosition]);
+  makeText("1221", SimPosn[pMeterSumPosition]+1);
 }}
 
 void ShowTemp(){
   if(confItem[GetSetting("S_DISPLAYTEMPERATURE")].value() > 0) {
-  makeText("30", temperaturePosition[ScreenType]);
-  mapchar(0x0e, temperaturePosition[ScreenType]+2);
+  makeText("30", SimPosn[temperaturePosition]);
+  mapchar(0x0e, SimPosn[temperaturePosition]+2);
 }}
 
 void ShowAmps(){
   if(confItem[GetSetting("S_AMPERAGE")].value() > 0) {
-  makeText("15.2A", amperagePosition[ScreenType]-7);
+  makeText("15.2A", SimPosn[amperagePosition]+1);
   }}
 
 void ShowUTC(){
   if(confItem[GetSetting("S_GPSTIME")].value() > 0) {
-  makeText("10:27:07", UTCPosition[ScreenType]);
-  }}
+    int seconds = second();
+    int minutes = minute();
+    int hours = hour();
+    String PCTimerString ="";
+
+    if (hours < 10){
+      PCTimerString = "0" + str(hours) ;
+    }
+    else
+    {
+      PCTimerString =  str(hours);
+    }
+    if (minutes < 10){
+      PCTimerString = PCTimerString +":0" + str(minutes)  ;
+    }
+    else
+    {
+      PCTimerString =  PCTimerString +":" + str(minutes);
+    }
+    if (seconds < 10){
+      PCTimerString = PCTimerString +":0" + str(seconds);
+    }
+    else
+    {
+      PCTimerString =  PCTimerString +":" + str(seconds);
+    }
+  
+    makeText(PCTimerString, SimPosn[GPS_timePosition]);
+  }
+}
 
 void displayHeading()
 {
@@ -628,23 +714,27 @@ void displayHeading()
   switch (str(heading).length())
   {
   case 1:
-    makeText(str(heading), MwHeadingPosition[0]+2);
+    makeText(str(heading), SimPosn[MwHeadingPosition]+2);
     break;
   case 2:
-    makeText(str(heading), MwHeadingPosition[0]+1);
+    makeText(str(heading), SimPosn[MwHeadingPosition]+1);
     break;
   case 3:
-    makeText(str(heading), MwHeadingPosition[0]);
+    makeText(str(heading), SimPosn[MwHeadingPosition]);
     break;
   case 4:
-    makeText(str(heading), MwHeadingPosition[0]-1);
+    makeText(str(heading), SimPosn[MwHeadingPosition]-1);
     break;
   }
-  mapchar(MwHeadingUnitAdd,MwHeadingPosition[0]+3);  
+  mapchar(MwHeadingUnitAdd,SimPosn[MwHeadingPosition]+3);  
   }}
 
 
 void SimulateTimer(){
+  if (SimPosn[flyTimePosition]==0x3FF){
+     return;
+  }
+
   String OnTimerString ="";
   String FlyTimerString ="";
   int seconds = (millis() - OnTimer) / 1000;
@@ -659,8 +749,8 @@ void SimulateTimer(){
   {
     OnTimerString = str(minutes) + ":" + str(seconds);
   }
-  
-  //ShowOnTime(OnTimerString);
+//  ShowOnTime(OnTimerString);
+
 
   if (FlyTimer >0) {
     seconds = (millis() - FlyTimer) / 1000;
@@ -676,11 +766,13 @@ void SimulateTimer(){
       FlyTimerString = str(minutes) + ":" + str(seconds);
     }
   }
-  else
-  {
-    FlyTimerString = "0:00";
-  } 
-   ShowFlyTime(FlyTimerString);
+   if ((toggleModeItems[0].getValue() == 0) && (SimItem0 < 1)){
+     ShowOnTime(OnTimerString);
+   }
+    else
+   {
+     ShowFlyTime(FlyTimerString);
+   } 
 }
 
 
@@ -694,65 +786,78 @@ void displayMode()
 }
   if(confItem[GetSetting("S_CHECK_")].value() > 0) {
     if((SimModebits&mode_armed) >0){
-    makeText(" ARMED", motorArmedPosition[0]);
+    makeText(" ARMED", SimPosn[motorArmedPosition]);
     armed = true;
   }
     else{
-    makeText("DISARMED", motorArmedPosition[0]);
+    makeText("DISARMED", SimPosn[motorArmedPosition]);
     armed = false;
   }
   }
   else{
-    makeText("DISCONNECTED", motorArmedPosition[0]-2);
+    makeText("DISCONNECTED", SimPosn[motorArmedPosition]-2);
     armed = false;
   }
   if(confItem[GetSetting("S_MODEICON")].value() > 0) {
-  if(confItem[GetSetting("S_MODESENSOR")].value() > 0) {
+
+    if(confItem[GetSetting("S_MODESENSOR")].value() > 0) {
     
     if((SimModebits&mode_stable) >0)
-      mapchar(0xa0,sensorPosition[0]);
+      mapchar(0xa0,SimPosn[sensorPosition]);
 
     if((SimModebits&mode_horizon) >0)
-      mapchar(0xa0,sensorPosition[0]);
+      mapchar(0xa0,SimPosn[sensorPosition]);
 
     if((SimModebits&mode_baro) >0)
-      mapchar(0xa2,sensorPosition[0]+1);
+      mapchar(0xa2,SimPosn[sensorPosition]+1);
 
     if((SimModebits&mode_mag) >0)
-      mapchar(0xa1,sensorPosition[0]+2);
+      mapchar(0xa1,SimPosn[sensorPosition]+2);
   }
 
   if(confItem[GetSetting("S_GIMBAL")].value() > 0) {
     if((SimModebits&mode_camstab) >0){
-      mapchar(0x16,gimbalPosition[0]);
-      mapchar(0x17,gimbalPosition[0]+1);
+      mapchar(0x16,SimPosn[gimbalPosition]);
+      mapchar(0x17,SimPosn[gimbalPosition]+1);
     }}
 
+     if (SimPosn[ModePosition]!=0x3FF){ 
+
     if((SimModebits&mode_gpshome) >0){
-      mapchar(0x9d,statusPosition[0]);
-      mapchar(0x9e,statusPosition[0]+1);
-      mapchar(0x2d,statusPosition[0]+2);
-//      mapchar(0x9e,statusPosition[0]+3);
-      String output = str(int(SGPS_distanceToHome.getValue()));
-      makeText(output,statusPosition[0]+3);
-      mapchar(0x0c,statusPosition[0]+3+output.length());
+      mapchar(0x9d,SimPosn[ModePosition]);
+      mapchar(0x9e,SimPosn[ModePosition]+1);
+//      mapchar(0x2d,SimPosn[ModePosition]+2);
+//      mapchar(0x9e,SimPosn[statusPosition]+3);
+//      String output = str(int(SGPS_distanceToHome.getValue()));
+//      makeText(output,SimPosn[ModePosition]+3);
+//      mapchar(0x0c,SimPosn[ModePosition]+3+output.length());
     }
     else if((SimModebits&mode_gpshold) >0){
-      mapchar(0xcd,statusPosition[0]);
-      mapchar(0xce,statusPosition[0]+1);
+      mapchar(0xcd,SimPosn[ModePosition]);
+      mapchar(0xce,SimPosn[ModePosition]+1);
+    }
+    else if((SimModebits&mode_gpsland) >0){
+      mapchar(0xb7,SimPosn[ModePosition]);
+      mapchar(0xb8,SimPosn[ModePosition]+1);
+    }
+    else if((SimModebits&mode_gpsmission) >0){
+      mapchar(0xb5,SimPosn[ModePosition]);
+      mapchar(0xb6,SimPosn[ModePosition]+1);
+      mapchar(0x30,SimPosn[ModePosition]+2);
     }
     else if((SimModebits&mode_stable) >0){
-      mapchar(0xac,statusPosition[0]);
-      mapchar(0xad,statusPosition[0]+1);
+      mapchar(0xac,SimPosn[ModePosition]);
+      mapchar(0xad,SimPosn[ModePosition]+1);
     }
     else if((SimModebits&mode_horizon) >0){
-      mapchar(0xc4,statusPosition[0]);
-      mapchar(0xc5,statusPosition[0]+1);
+      mapchar(0xc4,SimPosn[ModePosition]);
+      mapchar(0xc5,SimPosn[ModePosition]+1);
     }
     else{
-      mapchar(0xae,statusPosition[0]);
-      mapchar(0xaf,statusPosition[0]+1);
+      mapchar(0xae,SimPosn[ModePosition]);
+      mapchar(0xaf,SimPosn[ModePosition]+1);
     }
+  }
 
 }
 }
@@ -761,6 +866,13 @@ void displayMode()
 
 void displayHorizon(int rollAngle, int pitchAngle)
 {
+
+  int minimalscreen=0 ; 
+  if (toggleModeItems[9].getValue()>0) minimalscreen=1 ;
+
+   if (SimPosn[horizonPosition]<0x3FF){
+
+  
   if(pitchAngle>250) pitchAngle=250;                //250
   if(pitchAngle<-200) pitchAngle=-200;
   if(rollAngle>400) rollAngle=400;
@@ -808,8 +920,9 @@ void displayHorizon(int rollAngle, int pitchAngle)
     mapchar(0x00, 224-30-1);
     mapchar(0xbc, 224-30+1);
   }
+  }
   
-  //if (WITHDECORATION){
+if (SimPosn[SideBarPosition]<0x3FF){
   if(confItem[GetSetting("S_WITHDECORATION")].value() > 0) {
     mapchar(0xC7,128);
     mapchar(0xC7,128+30);
@@ -825,8 +938,16 @@ void displayHorizon(int rollAngle, int pitchAngle)
     mapchar(0x03, 219-30);
   }
 }
+}
 
-void ShowSideBArArrows(){
+void ShowSideBarArrows(){
+   if (SimPosn[horizonPosition]==0x3FF)
+      return;
+   if (SimPosn[SideBarScrollPosition]==0x3FF)
+      return;
+   
+
+
   if(confItem[GetSetting("S_SIDEBARTOPS")].value() > 0) {
     mapchar(0xCf,128+120+30);
     mapchar(0xCf,128+12+120+30);
@@ -843,15 +964,15 @@ void displayHeadingGraph()
   xx = xx / 90;
  //for (int i = 0; i < 9; i++){
  
-  mapchar(headGraph[xx++],MwHeadingGraphPosition[0]);
-  mapchar(headGraph[xx++],MwHeadingGraphPosition[0]+1);
-  mapchar(headGraph[xx++],MwHeadingGraphPosition[0]+2);
-  mapchar(headGraph[xx++],MwHeadingGraphPosition[0]+3);
-  mapchar(headGraph[xx++],MwHeadingGraphPosition[0]+4);
-  mapchar(headGraph[xx++],MwHeadingGraphPosition[0]+5);
-  mapchar(headGraph[xx++],MwHeadingGraphPosition[0]+6);
-  mapchar(headGraph[xx++],MwHeadingGraphPosition[0]+7);
-  mapchar(headGraph[xx],MwHeadingGraphPosition[0]+8);  
+  mapchar(headGraph[xx++],SimPosn[MwHeadingGraphPosition]);
+  mapchar(headGraph[xx++],SimPosn[MwHeadingGraphPosition]+1);
+  mapchar(headGraph[xx++],SimPosn[MwHeadingGraphPosition]+2);
+  mapchar(headGraph[xx++],SimPosn[MwHeadingGraphPosition]+3);
+  mapchar(headGraph[xx++],SimPosn[MwHeadingGraphPosition]+4);
+  mapchar(headGraph[xx++],SimPosn[MwHeadingGraphPosition]+5);
+  mapchar(headGraph[xx++],SimPosn[MwHeadingGraphPosition]+6);
+  mapchar(headGraph[xx++],SimPosn[MwHeadingGraphPosition]+7);
+  mapchar(headGraph[xx],SimPosn[MwHeadingGraphPosition]+8);  
 
 }}
 
@@ -880,6 +1001,8 @@ void GetModes(){
   mode_mag = 0;
   mode_gpshome = 0;
   mode_gpshold = 0;
+  mode_gpsmission = 0;
+  mode_gpsland = 0;
   mode_llights = 0;
   mode_camstab = 0;
   mode_osd_switch = 0;
@@ -893,10 +1016,189 @@ void GetModes(){
     if (boxnames[c] == "GPS HOME;") mode_gpshome |= bit;
     if (boxnames[c] == "GPS HOLD;") mode_gpshold |= bit;
     if (boxnames[c] == "OSD SW;") mode_osd_switch |= bit;
+    if (boxnames[c] == "MISSION;") mode_gpsmission |= bit;
    
     bit <<= 1L;
   }
+}
+
+void ShowSPort(){
+
+  if (SFRSKY.arrayValue()[0]<1) return;
+
+  int SYM_MIN = 0xB3;
+  int SYM_AVG = 0xB4;
+  int SYM_CELL0 = 0xF0;
   
-   
+//  String output = OnePlaceDecimal.format(voltage)
+   float cells=confItem[GetSetting("S_BATCELLS")].value();
+    if (cells<1) return;
+   float fcellvoltage=(sVBat/cells);
+   fcellvoltage=constrain(fcellvoltage,3.4,4.2); 
+   int cellpos=int (map(fcellvoltage,3.4,4.2,0,14));
+//   cellpos=0;
+   String cellvoltage=TwoPlaceDecimal.format(fcellvoltage);  
+
+   for(int i=0; i<6; i++) {
+     if(i>(cells-1))continue;//empty cell
+     mapchar(SYM_CELL0+cellpos, SimPosn[SportPosition]+(5-i));
+   }
+      
+   String output = TwoPlaceDecimal.format(sVBat);
+   mapchar(SYM_MIN, SimPosn[SportPosition]+LINE);
+   makeText(cellvoltage+"v", SimPosn[SportPosition]+LINE+1);
+
+   output = TwoPlaceDecimal.format(sVBat);
+   mapchar(SYM_AVG, SimPosn[SportPosition]+LINE+LINE);
+   makeText(cellvoltage+"v", SimPosn[SportPosition]+LINE+LINE+1);
+
+}
+
+void ShowMapMode(){
+int SYM_HOME      = 0x04;
+int SYM_AIRCRAFT  = 0X05;
+int SYM_RANGE_100 = 0x21;
+int SYM_RANGE_500 = 0x22;
+int SYM_RANGE_2500= 0x23;
+int SYM_RANGE_MAX = 0x24;
+int SYM_DIRECTION = 0x72;
+  int xdir=0;
+  int ydir=0;
+  int targetx=0;
+  int targety=0;
+  int range=200;
+  int angle=0;
+  int targetpos=0;
+  int centerpos=0;
+  int maxdistance=0;
+  int mapsymbolcenter=0;
+  int mapsymboltarget=0;
+  int mapsymbolrange=0;
+  int tmp=0;
+  int GPS_directionToHome=int(SGPSHeadHome.value());
+
+  if(GPS_directionToHome < 0) GPS_directionToHome += 360;
+
+  if ((toggleModeItems[0].getValue() == 0 )){
+    armedangle=MwHeading;
+  }
+
+//  int MwHeading=Mwheading;
+  
+  if (1==1) {
+    angle=(180+360+GPS_directionToHome-armedangle+MwHeading)%360;
+  }
+  else {
+    angle=(360+GPS_directionToHome-MwHeading)%360;  
+  }
+  tmp = angle/90;
+  switch (tmp) {
+    case 0:
+      xdir=+1;
+      ydir=-1;
+      break;
+    case 1:    
+      xdir=+1;
+      ydir=+1;
+      angle=180-angle;
+      break;
+    case 2:    
+      xdir=-1;
+      ydir=+1;
+      angle=angle-180;
+      break;
+    case 3: 
+      xdir=-1;
+      ydir=-1;
+      angle=360-angle;
+      break;   
+    }  
+
+  float rad  = angle * PI / 180;    // convert to radians  
+  int x = int(SGPS_distanceToHome.value() * sin(rad));
+  int y = int(SGPS_distanceToHome.value() * cos(rad));
+
+  if (y > x) maxdistance=y;
+  else maxdistance=x;
+  if (maxdistance < 100) {
+    range = 100;
+    mapsymbolrange=SYM_RANGE_100;
+  }
+  else if (maxdistance < 500) {
+    range = 500;
+    mapsymbolrange=SYM_RANGE_500;
+  }
+  else if (maxdistance < 2500) {
+    range = 2500;
+    mapsymbolrange=SYM_RANGE_2500;
+  }
+  else {
+    range = maxdistance;
+    mapsymbolrange=SYM_RANGE_MAX;
+  }
+
+  targetx = int(xdir*map(x, 0, range, 0, 16));
+  targety = int(ydir*map(y, 0, range, 0, 15));
+ 
+  if (maxdistance<20) {
+    targetx = 0;
+    targety = 0;  
+  }
+
+  centerpos=SimPosn[MapCenterPosition];
+  targetpos= centerpos + (targetx/2) + (LINE*(targety/3)); 
+
+
+  if (1==1) {
+    mapsymbolcenter = SYM_HOME;
+    mapsymboltarget = SYM_AIRCRAFT;
+  }
+  else {
+    mapsymbolcenter = SYM_AIRCRAFT;
+    mapsymboltarget = SYM_HOME;
+  }
+  
+  mapchar(mapsymbolcenter,centerpos);
+
+/*
+  if (1==0) {
+    tmp=(360+382+MwHeading-armedangle)%360/45;
+    tmp = SYM_DIRECTION + tmp;
+  }
+  else {
+    tmp = mapsymboltarget;
+  }
+*/
+
+/*  if (MAPTYPE==1) {
+    tmp=(360+382+MwHeading-armedangle)%360/45;
+    mapsymboltarget = SYM_DIRECTION + tmp;
+  }
+*/
+ 
+    int symx = (int)abs(targetx)%2;
+    int symy = (int)abs(targety)%3;
+    if (ydir==1)
+      symy=2-symy;
+    if (xdir==-1)
+      symx=1-symx;
+    if (abs(targety)<3)
+      symy = 1 - ydir;
+    if (abs(targetx)<2){
+      if (targetx<0)
+        symx=0;
+      else
+        symx=1;
+    }
+    tmp = 0xD0 + symy + (symx*3);
+//System.out.println(xdir+" "+ydir+" "+symx+" "+symy+" "+targetx+" "+targety+" "+tmp);
+  mapchar(mapsymbolrange,SimPosn[MapModePosition]);
+
+  if (maxdistance>20) {
+    mapchar(tmp,targetpos);
+  }
+
  
 }
+
+

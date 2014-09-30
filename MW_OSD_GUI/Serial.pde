@@ -42,6 +42,7 @@ String boxnames[] = { // names for dynamic generation of config GUI
     "CAMSTAB;",
     "GPS HOME;",
     "GPS HOLD;",
+    "MISSION;",
     "OSD SW;"    
   };
 String strBoxNames = join(boxnames,""); 
@@ -70,6 +71,8 @@ private static final int
   MSP_PIDNAMES             =117,
   MSP_BOXIDS               =119,
   MSP_RSSI                 =120,
+  MSP_NAV_STATUS           =121,
+  MSP_CELLS                =130,
   MSP_SET_RAW_RC           =200,
   MSP_SET_RAW_GPS          =201,
   MSP_SET_PID              =202,
@@ -97,7 +100,8 @@ private static final int
   OSD_WRITE_CMD            =2,
   OSD_GET_FONT             =3,
   OSD_SERIAL_SPEED         =4,
-  OSD_RESET                =5;
+  OSD_RESET                =5,
+  OSD_DEFAULT              =6;
 
 
 // initialize the serial port selected in the listBox
@@ -118,8 +122,7 @@ void InitSerial(float portValue) {
       buttonRESTART.setColorBackground(green_);
       
       g_serial.buffer(256);
-      System.out.println("Port Turned On " );
-      FileUploadText.setText("");
+            FileUploadText.setText("");
       delay(1500);
       SendCommand(MSP_IDENT);
      
@@ -223,8 +226,7 @@ void RESTART(){
     tailSerialReply();
   }
   toggleMSP_Data = false;
-  delay(2500);
-  READ();
+//  delay(2000);
 }  
 
 public void READ(){
@@ -242,8 +244,10 @@ public void READ(){
    }
 }
 
+
 public void WRITE(){
 
+//  SimControlToggle.setValue(0);
   confItem[GetSetting("S_AMPMAXL")].setValue(int(confItem[GetSetting("S_AMPDIVIDERRATIO")].value())&0xFF); // for 8>>16 bit EEPROM
   confItem[GetSetting("S_AMPMAXH")].setValue(int(confItem[GetSetting("S_AMPDIVIDERRATIO")].value())>>8);
 
@@ -253,21 +257,41 @@ public void WRITE(){
   toggleMSP_Data = true;
   p = 0;
   inBuf[0] = OSD_WRITE_CMD;
-  //evaluateCommand((byte)MSP_OSD, 1);
+//  delay (100); 
   for (int txTimes = 0; txTimes<2; txTimes++) {
-    headSerialReply(MSP_OSD, CONFIGITEMS+1);
+    headSerialReply(MSP_OSD, CONFIGITEMS + (CONFIGITEMS16*2*2) +1);
+//    headSerialReply(MSP_OSD, CONFIGITEMS +1);
     serialize8(OSD_WRITE_CMD);
+
+confItem[GetSetting("S_MAPMODE")].setValue(1);
+
     for(int i = 0; i < CONFIGITEMS; i++){
      if(i == GetSetting("S_GPSTZ")) serialize8(int(confItem[i].value()*10));//preserve decimal, maybe can go elsewhere - haydent
      else serialize8(int(confItem[i].value()));
+//    System.out.println("Loc: "+i+ " Val: "+ int(confItem[i].value()) );
     }
+
+     int clayout=int(confItem[GetSetting("S_HUD")].value()); 
+     for(int i = 0; i < (CONFIGITEMS16); i++){
+       serialize8(int(ConfigLayout[0][i]&0xFF));
+       serialize8(int(ConfigLayout[0][i]>>8));
+     }
+     for(int i = 0; i < (CONFIGITEMS16); i++){
+       serialize8(int(ConfigLayout[1][i]&0xFF));
+       serialize8(int(ConfigLayout[1][i]>>8));
+     }
+
     tailSerialReply();
   }
   
   toggleMSP_Data = false;
   g_serial.clear();
   PortWrite = false;
+//  SimControlToggle.setValue(0);
+//  delay(2000);
+
 }
+
 
 public void FONT_UPLOAD(){
   if (init_com==0){
@@ -329,19 +353,27 @@ public void SendChar(){
 
 public void DEFAULT(){
  if (init_com==1){
+//    toggleConfItem[0].setValue(0);
     noLoop();
     int Reset_result = JOptionPane.showConfirmDialog(this,"Are you sure you wish to set OSD to DEFAULT values?", "RESET OSD MEMORY",JOptionPane.WARNING_MESSAGE,JOptionPane.YES_NO_CANCEL_OPTION);
     loop();
     switch (Reset_result) {
       case JOptionPane.YES_OPTION:
-        toggleConfItem[0].setValue(0);
-        confItem[0].setValue(0);
-        WRITE();
-        RESTART();
+        toggleMSP_Data = true;
+        for (int txTimes = 0; txTimes<2; txTimes++) {
+          headSerialReply(MSP_OSD, 1);
+          serialize8(OSD_DEFAULT);
+          tailSerialReply();
+        }
+        toggleMSP_Data = false;
+        confCheck = 0;
+        resCheck = 0;
         return;
       case JOptionPane.CANCEL_OPTION:
+//        SimControlToggle.setValue(1);
         return;
       default:
+//        SimControlToggle.setValue(1);
         return;
     }
  }else
@@ -350,6 +382,7 @@ public void DEFAULT(){
    JOptionPane.showConfirmDialog(null,"Please Select a Port", "Not Connected", JOptionPane.PLAIN_MESSAGE,JOptionPane.WARNING_MESSAGE);
    loop();
  }
+
 }
 
 
@@ -376,8 +409,9 @@ void SendCommand(int cmd){
         if(toggleModeItems[5].getValue()> 0) modebits |=1<<8;
         if(toggleModeItems[6].getValue()> 0) modebits |=1<<10;
         if(toggleModeItems[7].getValue()> 0) modebits |=1<<11;
-        if(toggleModeItems[8].getValue()> 0) modebits |=1<<19;
-        if(toggleModeItems[8].getValue()> 0) modebits |=1<<16; //Also send LLIGHTS when OSD enabled - for testing
+        if(toggleModeItems[8].getValue()> 0) modebits |=1<<20;
+        if(toggleModeItems[9].getValue()> 0) modebits |=1<<19;
+//        if(toggleModeItems[8].getValue()> 0) modebits |=1<<16; //Also send LLIGHTS when OSD enabled - for testing
         serialize32(modebits);
         serialize8(0);   // current setting
         tailSerialReply();
@@ -409,6 +443,25 @@ void SendCommand(int cmd){
         PortIsWriting = false;
       break;
  
+      case MSP_CELLS:
+        PortIsWriting = true;
+        headSerialReply(MSP_CELLS, 12);
+        if (SFRSKY.arrayValue()[0]<1) break;
+       if (int(confItem[GetSetting("S_BATCELLS")].value()) <1) break;
+        int cellvolt= (int(sVBat * 100))/int(confItem[GetSetting("S_BATCELLS")].value());
+        for (int i=0; i<6; i++) {
+          if (i < int(confItem[GetSetting("S_BATCELLS")].value())) {
+            serialize16(cellvolt);
+          }
+          else {
+            serialize16(0);
+          }
+        }
+        tailSerialReply();
+        PortIsWriting = false;
+      break;
+
+
       case MSP_BOXNAMES:
         PortIsWriting = true;
         headSerialReply(MSP_BOXNAMES,strBoxNames.length());
@@ -419,8 +472,8 @@ void SendCommand(int cmd){
       
       case MSP_BOXIDS:
         PortIsWriting = true;
-        headSerialReply(MSP_BOXIDS,21);
-        for (int i=0; i<21; i++) {
+        headSerialReply(MSP_BOXIDS,23);
+        for (int i=0; i<23; i++) {
         serialize8(i);
         }
         tailSerialReply();
@@ -429,7 +482,7 @@ void SendCommand(int cmd){
 
      
       case MSP_ATTITUDE:
-        PortIsWriting = true;
+                PortIsWriting = true;
         headSerialReply(MSP_ATTITUDE, 8);
         serialize16(int(MW_Pitch_Roll.arrayValue()[0])*10);
         serialize16(int(MW_Pitch_Roll.arrayValue()[1])*10);
@@ -439,6 +492,23 @@ void SendCommand(int cmd){
         PortIsWriting = false;
       break;
      
+
+
+      case MSP_DEBUG:
+        PortIsWriting = true;
+        headSerialReply(MSP_DEBUG, 8);
+
+        for (int i = 0; i < 4; i++) {
+        debug[i]++;
+        }
+
+        serialize16(debug[0]);
+        serialize16(debug[1]);
+        serialize16(debug[2]);
+        serialize16(debug[3]);
+        tailSerialReply();
+        PortIsWriting = false;
+      break;
      
      
       case MSP_ANALOG:
@@ -451,7 +521,27 @@ void SendCommand(int cmd){
         PortIsWriting = false;
       break;
       
-      
+
+      case MSP_NAV_STATUS:
+        PortIsWriting = true;
+        headSerialReply(MSP_NAV_STATUS, 7);
+        if (millis()>oldwpmillis+2000){
+          oldwpmillis=millis();
+          wpno++;
+          if (wpno>15) wpno=0;
+        }
+        serialize8(0);
+        serialize8(0);
+        serialize8(0);
+        serialize8(wpno);
+        serialize8(0);
+        serialize8(0);
+        serialize8(0);
+        tailSerialReply();
+        PortIsWriting = false;
+      break;
+ 
+     
       case MSP_RAW_GPS:
         // We have: GPS_fix(0-2), GPS_numSat(0-15), GPS_coord[LAT & LON](signed, in 1/10 000 000 degres), GPS_altitude(signed, in meters) and GPS_speed(in cm/s)  
         headSerialReply(MSP_RAW_GPS,16);
@@ -466,12 +556,20 @@ void SendCommand(int cmd){
     
   
     case MSP_COMP_GPS:
-      headSerialReply(MSP_COMP_GPS,5);
+      if(confItem[GetSetting("S_GPSTIME")].value()>0)
+        headSerialReply(MSP_COMP_GPS,9);
+      else
+        headSerialReply(MSP_COMP_GPS,5);
       serialize16(int(SGPS_distanceToHome.value()));
       int GPSheading = int(SGPSHeadHome.value());
       if(GPSheading < 0) GPSheading += 360;
       serialize16(GPSheading);
       serialize8(0);
+      if(confItem[GetSetting("S_GPSTIME")].value()>0) {
+        int osdtime=hour()*3600+minute()*60+second();
+        osdtime = osdtime*1000;
+        serialize32(osdtime);
+      }
     break;
     
     
@@ -623,9 +721,18 @@ public void evaluateCommand(byte cmd, int size) {
           }
           else {
             // Returned result from OSD.
+            confCheck=0;
             for(int i = 0; i < CONFIGITEMS; i++){
-              SetConfigItem(i, read8());
+              int xx = read8();
+              if (i==0){
+                confCheck=xx;
+              }
+              if (confCheck>0){
+              SetConfigItem(i, xx);
+              resCheck=1;
+              }
             }
+//    System.out.println(confCheck);
               S16_AMPMAX=(int(confItem[GetSetting("S_AMPMAXH")].value())<<8)+ int(confItem[GetSetting("S_AMPMAXL")].value()); // for 8>>16 bit EEPROM
               SetConfigItem(GetSetting("S_AMPDIVIDERRATIO"), (int) S16_AMPMAX);
 
@@ -765,6 +872,7 @@ void MWData_Com() {
             try{
               if ((init_com==1)  && (toggleMSP_Data == true)) {
                   evaluateCommand(cmd, (int)dataSize);
+                  //System.out.println("CMD: "+cmd);
                   //PortRead = false;
               }
               else{

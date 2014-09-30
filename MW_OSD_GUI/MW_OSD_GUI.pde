@@ -42,15 +42,54 @@ import java.util.*;
 import java.io.FileNotFoundException;
 import java.text.DecimalFormat;
 
-
 //added new imports to support proccessing 2.0b7
 
 
 
-String MW_OSD_GUI_Version = "R1";
+String MW_OSD_GUI_Version = "R1.2";
+
+
+
+int  GPS_numSatPosition = 0;
+int  GPS_directionToHomePosition = 1;
+int  GPS_distanceToHomePosition = 2;
+int  speedPosition = 3;
+int  GPS_angleToHomePosition = 4;
+int  MwGPSAltPosition = 5;
+int  sensorPosition = 6;
+int  MwHeadingPosition = 7;
+int  MwHeadingGraphPosition = 8;
+int  MwAltitudePosition = 9;
+int  MwClimbRatePosition = 10;
+int  CurrentThrottlePosition = 11;
+int  flyTimePosition = 12;
+int  onTimePosition = 13;
+int  motorArmedPosition = 14;
+int  MwGPSLatPosition = 15;
+int  MwGPSLonPosition = 16;
+int  MwGPSLatPositionTop = 17;
+int  MwGPSLonPositionTop = 18;
+int  rssiPosition = 19;
+int  temperaturePosition = 20;
+int  voltagePosition = 21;
+int  vidvoltagePosition = 22;
+int  amperagePosition = 23;
+int  pMeterSumPosition = 24;
+int  horizonPosition = 25;
+int  SideBarPosition =26; 
+int  SideBarScrollPosition = 27;
+int  callSignPosition = 28;
+int  debugPosition = 29;
+int  gimbalPosition = 30;
+int  GPS_timePosition = 31;
+int  SportPosition = 32;
+int  ModePosition = 33;
+int  MapModePosition = 34;
+int  MapCenterPosition = 35;
+int  APstatusPosition = 36;
 
 int MSP_sendOrder =0;
-PImage img_Clear,OSDBackground,RadioPot;
+PImage img_Clear,GUIBackground,OSDBackground,RadioPot;
 
 // ScreenType---------- NTSC = 0, PAL = 1 ---------------------------------
 int ScreenType = 0;
@@ -76,69 +115,8 @@ int LINE15  =  420;
 int LINE16  =  450;
 int TestLine = 300;
 
-// TOP OF THE SCREEN
-int[] GPS_numSatPosition = {
- LINE02+2,LINE02+2};
-int[] GPS_directionToHomePosition=    {
-  LINE02+21 ,LINE02+21};
-int[] MwGPSLatPosition =              {
-  LINE01+2,LINE01+2};
-int[] MwGPSLonPosition =              {
-  LINE01+13+2,LINE01+13+2};
-int[] GPS_distanceToHomePosition=  {
-  LINE02+23  ,LINE02+23 };
-int[] GPS_angleToHomePosition=  {
-  LINE05+23 ,LINE05+23};
-int[] MwGPSAltPosition =        {
-  LINE03+23  ,LINE03+23};
-int[] sensorPosition=           {
-  LINE02+6 ,LINE02+6};
-int[] MwHeadingPosition =       {
-  LINE04+23 ,LINE04+23};
-int[] MwHeadingGraphPosition =  {
-  LINE02+10 ,LINE02+10};
-int[] statusPosition = {
- LINE04+2,LINE04+2};
-int[] gimbalPosition = {
- LINE05+2,LINE05+2};
+int TOPSHIFT = 0;
 
-// MIDDLE OF THE SCREEN
-int[] GPS_speedPosition = {     
-  LINE07+3,LINE07+3 };  // [0] En Km/h   [1] En Mph
-int[] temperaturePosition= {
-  LINE09+2   ,LINE09+2+30};
-int[] MwAltitudePosition=  {
-  LINE07+22,LINE07+22 };
-int[] MwClimbRatePosition=  {
-  LINE07+27 ,LINE07+28 };
-
-int[] MwGPSMidLatPosition =              {
-  LINE10+2,LINE10+2+60};
-int[] MwGPSMidLonPosition =              {
-  LINE10+13+2,LINE10+13+2+60};
-
-int[] CurrentThrottlePosition = {
-  LINE12+23,LINE12+24+60};
-int[] flyTimePosition=                {
-  LINE13+23,LINE13+24+60};
-//int[] onTimePosition=                 {
- // LINE13+23,LINE13+24+60};
-int[] motorArmedPosition=            {
-  LINE11+11,LINE10+11+60};
-int[]  rssiPosition = {
-  LINE12+2 ,LINE12+2+60};
-int[] UTCPosition =     {
-  LINE12+11,LINE11+11+60};
-int[] voltagePosition =                {
-  LINE13+2  ,LINE13+2+60 };
-int[] vidvoltagePosition =   {
-  LINE11+3  ,LINE11+3+60};
-int[] amperagePosition =     {
-  LINE13+17,LINE13+19+60};
-int[] pMeterSumPosition =       {
-  LINE15+30,LINE15+30+60};
-int[] debugPosition =       {
-  LINE08+10,LINE07+10+60};
  
   
 int DisplayWindowX = 681; //500;
@@ -190,6 +168,7 @@ int commListMax = 0;
 int whichKey = -1;  // Variable to hold keystoke values
 int inByte = -1;    // Incoming serial data
 int[] serialInArray = new int[3];    // Where we'll put what we receive
+int[] debug = new int[4];    
 
 
 int serialCount = 0;                 // A count of how many bytes we receive
@@ -220,7 +199,7 @@ int XVREF      = 120;        int YVREF    = 444;
 int XVolts     = 120;        int YVolts    = 5;
 int XAmps      = 120;        int YAmps    = 190;
 int XVVolts    = 120;        int YVVolts  = 114;
-int XTemp      = 510;        int YTemp    = 266;
+int XTemp      = 510;        int YTemp    = 268;
 int XCS        = 120;        int YCS    = 486;
 int XGPS       = 510;        int YGPS    = 5;
 int XCOMPASS   = 510;        int YCOMPASS    = 98;
@@ -229,7 +208,7 @@ int XTIME      = 510;        int YTIME    = 190;
 //int XTIME      = 510;        int YTIME    = 5;
 int XHUD       = 305;        int YHUD     = 240;
 int XDisplay     = 305;        int YDisplay   = 114; //48;
-int XSPORT      = 510;        int YSPORT    = 353;
+int XSPORT      = 510;        int YSPORT    = 357;
 
 int XOther     = 305;        int YOther   = 5; //48;
 //int XOther     = 305;        int YOther   = 150; //48;
@@ -248,13 +227,20 @@ int xx=0;
 int YLocation = 0;
 int Roll = 0;
 int Pitch = 0;
-
+int confmillis = 1000;
+int confCheck = 0;
+int resmillis = 5000;
+int resCheck = 1;
 int OnTimer = 0;
 int FlyTimer = 0;
 float SimItem0= 0;
 int Armed = 0;
 int Showback = 1;
 int del = 0;
+int armedangle=0;
+int oldwpmillis;
+int wpno; 
+
 // int variables
 
 // For Heading
@@ -334,6 +320,8 @@ String[] ConfigNames = {
   "Zero Adjust",
   "Amperage 16L",  
   "Amperage 16H",  
+  "HUD layout",  
+  "HUD layout - OSD SW",  
   "S_CS0",
   "S_CS1",
   "S_CS2",
@@ -415,6 +403,8 @@ String[] ConfigHelp = {
   "Zero Adjust",
   "Amperage 16L",  
   "Amperage 16H",  
+  "HUD layout",  
+  "HUD layout - OSD SW",  
   "S_CS0",
   "S_CS1",
   "S_CS2",
@@ -433,6 +423,9 @@ String[] ConfigHelp = {
 static int CHECKBOXITEMS=0;
 int CONFIGITEMS=ConfigNames.length;
 static int SIMITEMS=6;
+
+//     System.out.println("MSP: ");
+
   
 int[] ConfigRanges = {
 1,   // used for check             0
@@ -480,7 +473,7 @@ int[] ConfigRanges = {
 1,     // S_WITHDECORATION         31
 1,     // S_SHOWBATLEVELEVOLUTION  32
 1,     // S_RESETSTATISTICS        33
-1,     // S_ENABLEADC              34
+1,     // S_MAPMODE              34 //map mode
 1,     // S_VREFERENCE,
 1,     // S_USE_BOXNAMES           35
 1,     // S_MODEICON               36
@@ -503,6 +496,8 @@ int[] ConfigRanges = {
 1023,  // S_AMPMIN,
 255,   // S_AMPMAXL,
 3,     // S_AMPMAXH,
+7,     // S_HUD,  
+7,     // S_HUDOSDSW,  
 255,
 255,
  255,
@@ -515,6 +510,8 @@ int[] ConfigRanges = {
  255,
 
 };
+
+
 String[] SimNames= {
   "Armed:",
   "Acro/Stable:",
@@ -617,7 +614,8 @@ void setup() {
 //Map<Settings, String> table = new EnumMap<Settings>(Settings.class);
 OnTimer = millis();
   frameRate(30); 
-OSDBackground = loadImage("Background.jpg");
+OSDBackground = loadImage("OSD_def.jpg");
+GUIBackground = loadImage("GUI_def.jpg");
 //RadioPot = loadImage("MWImage.jpg");
 //PGraphics icon = createGraphics(16, 16, P3D);
 //icon.beginDraw();
@@ -698,6 +696,7 @@ CreateItem(GetSetting("S_CHECK_"), 5, 0, G_EEPROM);
 CreateItem(GetSetting("S_AMPMAXL"), 5, 0, G_EEPROM);
 CreateItem(GetSetting("S_AMPMAXH"), 5, 0, G_EEPROM);
 CreateItem(GetSetting("S_USE_BOXNAMES"),  5,0, G_EEPROM);
+CreateItem(GetSetting("S_MAPMODE"),  5,0, G_EEPROM);
 
 // RSSI  ---------------------------------------------------------------------------
 
@@ -748,12 +747,13 @@ CreateItem(GetSetting("S_GPSCOORDTOP"),  5,2*17, G_GPS);
 CreateItem(GetSetting("S_GPSALTITUDE"),  5,3*17, G_GPS);
 
 //  HUD  ----------------------------------------------------------------------------
-CreateItem(GetSetting("S_DISPLAY_HORIZON_BR"),  5,0*17, G_HUD);
-CreateItem(GetSetting("S_HORIZON_ELEVATION"),  5,1*17, G_HUD);
-CreateItem(GetSetting("S_WITHDECORATION"),  5,2*17, G_HUD);
-CreateItem(GetSetting("S_SCROLLING"),  5,3*17, G_HUD);
-CreateItem(GetSetting("S_SIDEBARTOPS"),  5,4*17, G_HUD);
-CreateItem(GetSetting("S_ENABLEADC"),  5,5*17, G_HUD);
+CreateItem(GetSetting("S_HUD"),  5,0*17, G_HUD);
+CreateItem(GetSetting("S_HUDOSDSW"),  5,1*17, G_HUD);
+CreateItem(GetSetting("S_DISPLAY_HORIZON_BR"),  5,2*17, G_HUD);
+CreateItem(GetSetting("S_HORIZON_ELEVATION"),  5,3*17, G_HUD);
+CreateItem(GetSetting("S_WITHDECORATION"),  5,4*17, G_HUD);
+CreateItem(GetSetting("S_SCROLLING"),  5,5*17, G_HUD);
+CreateItem(GetSetting("S_SIDEBARTOPS"),  5,6*17, G_HUD);
 
 //  VREF  ----------------------------------------------------------------------------
 CreateItem(GetSetting("S_VREFERENCE"),  5,0*17, G_VREF);
@@ -868,7 +868,7 @@ controlP5.addTextfield("CallSign")
   CloseMode = 0;
   LoadConfig();
   
-  
+ 
 }
 
 
@@ -981,6 +981,8 @@ void MakePorts(){
 
 void draw() {
   time=millis();
+//    image(GUIBackground,0, 0, windowsX, windowsY); //529-WindowShrinkX, 360-WindowShrinkY);
+
   //hint(ENABLE_DEPTH_TEST);
   //pushMatrix();
   //PortRead = false; 
@@ -1019,7 +1021,7 @@ void draw() {
       time5 = time;
        
       if (init_com==1){
-        SendCommand(MSP_BOXNAMES);
+        SendCommand(MSP_S);
         SendCommand(MSP_BOXIDS);
       }
       //PortWrite = false;
@@ -1050,23 +1052,39 @@ void draw() {
 
 */
 // PatrikE
+
   {
     //PortWrite = true;
     //MakePorts();
 
 
     if (!FontMode) {
-
       if (init_com==1) {
-        if (ClosePort) return;
 
-        if ((time-time5 >50000) && (toggleMSP_Data == false)) {
-          time5 = time;
-          if (init_com==1) {
-            SendCommand(MSP_BOXNAMES);
-            SendCommand(MSP_BOXIDS);
+        if(confCheck == 0) {
+          if (millis()>confmillis){
+            READ();
+            if(confCheck > 0)
+              resCheck = 1;
+            confmillis=millis()+500;
           }
         }
+
+        if(resCheck == 0) {
+          if (millis()>resmillis){
+            READ();
+            if(confCheck == 0)
+              RESTART();
+            resmillis=millis()+3000;
+          }
+        }         
+
+
+        
+        if (ClosePort) return;
+          SendCommand(MSP_BOXNAMES);
+          SendCommand(MSP_BOXIDS);
+          SendCommand(MSP_IDENT);
 
         MSP_sendOrder++;
         switch(MSP_sendOrder) {
@@ -1076,6 +1094,7 @@ void draw() {
           break;
         case 2:
           if (init_com==1)SendCommand(MSP_STATUS);
+          if (init_com==1)SendCommand(MSP_CELLS);
           break;
         case 3:
           if (init_com==1)SendCommand(MSP_RC);
@@ -1090,36 +1109,23 @@ void draw() {
           break;
         case 6: 
           if (init_com==1)SendCommand(MSP_RC);
-          if(time-time5 < 10000)MSP_sendOrder=0;
           break;
         case 7: 
-          if (toggleMSP_Data == true && (time-time5 < 5000)) MSP_sendOrder=0;
           if (toggleMSP_Data == false) SendCommand(MSP_BOXNAMES);
           break;
         case 8:
-          time5 = time;
           if (toggleMSP_Data == false) SendCommand(MSP_BOXIDS);
-          MSP_sendOrder=0;
           break;
         case 9:
+          if (init_com==1)SendCommand(MSP_NAV_STATUS);
           break;
         case 10:
+          if (init_com==1)SendCommand(MSP_DEBUG);
+          MSP_sendOrder=0;
           break;
         case 11:
           break;
         }
-// Unused timers.        
-//        if ((time-time4 >200)) {
-//          time4 = time; 
-//          //PortWrite = !PortWrite;
-//          //MakePorts();
-//        }
-//
-//        if ((time-time1 >40)) {
-//          time1 = time; 
-//          //PortWrite = false;
-//        }
-
       }
     } // End !FontMode
   }
@@ -1141,14 +1147,17 @@ void draw() {
   // Draw background control boxes
   // ------------------------------------------------------------------------
 
+  image(GUIBackground,0, 0, windowsX, windowsY); 
+
+
   // Coltrol Box
-  fill(100); strokeWeight(3);stroke(200); rectMode(CORNERS); rect(XControlBox,YControlBox, XControlBox+108, YControlBox+123); //108//130
-  textFont(font12); fill(255, 255, 255); text("OSD Controls",XControlBox + 15,YControlBox + 15);
+  fill(30,255); strokeWeight(3);stroke(0); rectMode(CORNERS); rect(XControlBox,YControlBox, XControlBox+108, YControlBox+123); //108//130
+  textFont(font12); fill(255,255,255); text("OSD Controls",XControlBox + 15,YControlBox + 15);
   if (activeTab == 1) {
   
   }
   
-  fill(40, 40, 40);
+  fill(30,255);
   strokeWeight(3);stroke(0);
   rectMode(CORNERS);
   rect(5,5,113,40);
@@ -1156,22 +1165,79 @@ void draw() {
   // version
   fill(255, 255, 255);
   text("MWII OSD NG",10,19);
-  text("GUI V: ",10,35);
-  text(MW_OSD_GUI_Version, 74, 35);
-  fill(0, 0, 0);
+  text("GUI v: ",10,35);
+  text(MW_OSD_GUI_Version, 55, 35);
+//  fill(255, 0, 0);
   strokeWeight(3);stroke(0);
   rectMode(CORNERS);
   if (int(ShowSimBackground.arrayValue()[0]) < 1){
     image(OSDBackground,DisplayWindowX+WindowAdjX+10, DisplayWindowY+WindowAdjY, 354-WindowShrinkX, 300-WindowShrinkY); //529-WindowShrinkX, 360-WindowShrinkY);
   }
   else{
-    fill(80, 80,80); strokeWeight(3);stroke(1); rectMode(CORNER); rect(DisplayWindowX+WindowAdjX, DisplayWindowY+WindowAdjY, 364-WindowShrinkX, 300-WindowShrinkY);  //335-WindowShrinkX, 288-WindowShrinkY);
+    fill(80, 80, 80); strokeWeight(3);stroke(1); rectMode(CORNER); rect(DisplayWindowX+WindowAdjX, DisplayWindowY+WindowAdjY, 364-WindowShrinkX, 300-WindowShrinkY);  //335-WindowShrinkX, 288-WindowShrinkY);
   }
 
 
 //################################################################################################################################################################################ 
 // Display
 //################################################################################################################################################################################ 
+
+
+
+ for(int i = 0; i < (CONFIGITEMS16); i++){
+       if(confItem[GetSetting("S_HUD")].value()==7) 
+         ConfigLayout[0][i]=CONFIG16_7[i];
+       else if(confItem[GetSetting("S_HUD")].value()==6) 
+         ConfigLayout[0][i]=CONFIG16_6[i];
+       else if(confItem[GetSetting("S_HUD")].value()==5) 
+         ConfigLayout[0][i]=CONFIG16_5[i];
+       else if(confItem[GetSetting("S_HUD")].value()==4) 
+         ConfigLayout[0][i]=CONFIG16_4[i];
+       else if(confItem[GetSetting("S_HUD")].value()==3) 
+         ConfigLayout[0][i]=CONFIG16_3[i];
+       else if(confItem[GetSetting("S_HUD")].value()==2) 
+         ConfigLayout[0][i]=CONFIG16_2[i];
+       else if(confItem[GetSetting("S_HUD")].value()==1) 
+         ConfigLayout[0][i]=CONFIG16_1[i];
+       else  
+         ConfigLayout[0][i]=CONFIG16_0[i];
+
+
+       if(confItem[GetSetting("S_HUDOSDSW")].value()==7) 
+         ConfigLayout[1][i]=CONFIG16_7[i];
+       else if(confItem[GetSetting("S_HUDOSDSW")].value()==6) 
+         ConfigLayout[1][i]=CONFIG16_6[i];
+       else if(confItem[GetSetting("S_HUDOSDSW")].value()==5) 
+         ConfigLayout[1][i]=CONFIG16_5[i];
+       else if(confItem[GetSetting("S_HUDOSDSW")].value()==4) 
+         ConfigLayout[1][i]=CONFIG16_4[i];
+       else if(confItem[GetSetting("S_HUDOSDSW")].value()==3) 
+         ConfigLayout[1][i]=CONFIG16_3[i];
+       else if(confItem[GetSetting("S_HUDOSDSW")].value()==2) 
+         ConfigLayout[1][i]=CONFIG16_2[i];
+       else if(confItem[GetSetting("S_HUDOSDSW")].value()==1) 
+         ConfigLayout[1][i]=CONFIG16_1[i];
+       else  
+         ConfigLayout[1][i]=CONFIG16_0[i];
+
+   int minimalscreen=0;
+   if (toggleModeItems[9].getValue()>0) minimalscreen=1 ;
+
+   if (minimalscreen==1){
+      SimPosn[i]=ConfigLayout[1][i];
+   }
+   else {
+      SimPosn[i]=ConfigLayout[0][i];
+   }
+
+   if (SimPosn[i]<0x4000){
+     SimPosn[i]=0x3FF; 
+   }
+   else{
+   SimPosn[i]=SimPosn[i]&0x3FF;
+ }
+   
+  }
 
   if(confItem[GetSetting("S_DISPLAY_HORIZON_BR")].value() > 0) displayHorizon(int(MW_Pitch_Roll.arrayValue()[0])*10,int(MW_Pitch_Roll.arrayValue()[1])*10*-1);
   SimulateTimer();
@@ -1195,7 +1261,8 @@ void draw() {
   displayHeadingGraph();
   displayHeading();
   ShowDebug();
-  ShowSideBArArrows();
+  ShowSideBarArrows();
+  ShowAPstatus();
 
   if(confItem[GetSetting("S_DISPLAYGPS")].value() > 0) {
   ShowGPSAltitude();
@@ -1206,9 +1273,12 @@ void draw() {
   ShowDirection();
  }
  
+  ShowMapMode();
+    
   MatchConfigs();
   MakePorts();
-
+  
+  ShowSPort();
   
   if ((ClosePort ==true)&& (PortWrite == false)){ //&& (init_com==1)
     ClosePort();
@@ -1776,4 +1846,5 @@ public void GPSTIMELINK(){
 public void SPORTLINK(){
  link("http://code.google.com/p/scarab-osd/wiki/Frsky_SPort"); 
 }
+
 

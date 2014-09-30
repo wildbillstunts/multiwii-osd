@@ -91,6 +91,29 @@ uint8_t FindNull(void)
   return xx;
 }
 
+ 
+uint16_t getPosition(uint8_t pos) {
+  uint16_t val = screenPosition[pos];
+  uint16_t ret = val&POS_MASK;
+  return ret;
+}
+
+uint8_t fieldIsVisible(uint8_t pos) {
+//  uint16_t val = (uint16_t)pgm_read_word(&screenPosition[pos]);
+  uint16_t val = screenPosition[pos];
+  switch(val & DISPLAY_MASK) {
+  case DISPLAY_ALWAYS:
+    return 1;
+  case DISPLAY_NEVER:
+    return 0;
+  case DISPLAY_COND:
+    return !!(MwSensorActive&mode.osd_switch);
+  case DISPLAY_MIN_OFF:
+    return !(MwSensorActive&mode.osd_switch);
+  }
+}
+
+
 void displayTemperature(void)        // WILL WORK ONLY WITH V1.2
 {
   int xxx;
@@ -109,10 +132,9 @@ void displayTemperature(void)        // WILL WORK ONLY WITH V1.2
   MAX7456_WriteString(screenBuffer,getPosition(temperaturePosition));
 }
 
+
 void displayMode(void)
 {
-  if (MwSensorActive&mode.osd_switch)
-  return;
   
   int16_t dist;
   if(Settings[S_UNITSYSTEM])
@@ -129,17 +151,38 @@ void displayMode(void)
   else
    screenBuffer[xx++] =SYM_FT;
    screenBuffer[xx++] =0;
-  
+
+    if(MwSensorActive&mode.passthru){ // Remove All mode Icons Create a Manual.
+      screenBuffer[2]=0;
+      screenBuffer[0] = 0;
+      screenBuffer[1] = 0;
+    }
+ 
     if(MwSensorActive&mode.gpshome){
-      screenBuffer[8]=0;
       screenBuffer[0] = SYM_GHOME;
       screenBuffer[1] = SYM_GHOME1;
+#ifdef APINDICATOR
+      screenBuffer[2]=0;
+#else
       screenBuffer[2] = SYM_COLON;
+      screenBuffer[8]=0;
+#endif
     }
     else if(MwSensorActive&mode.gpshold){
       screenBuffer[2]=0;
       screenBuffer[0] = SYM_GHOLD;
       screenBuffer[1] = SYM_GHOLD1;
+    }
+    else if(MwSensorActive&mode.gpsmission){
+      itoa(GPS_waypoint_step,screenBuffer+2,10);
+      screenBuffer[4]=0;
+      screenBuffer[0] = SYM_GMISSION;
+      screenBuffer[1] = SYM_GMISSION1;
+    }
+    else if(MwSensorActive&mode.gpsland){
+      screenBuffer[2]=0;
+      screenBuffer[0] = SYM_GLAND;
+      screenBuffer[1] = SYM_GLAND1;
     }
     else if(MwSensorActive&mode.stable){
       screenBuffer[2]=0;
@@ -156,38 +199,56 @@ void displayMode(void)
       screenBuffer[0]=SYM_ACRO;
       screenBuffer[1]=SYM_ACRO1;
     }
+#ifdef APINDICATOR
+      displayAPstatus();
+#endif
     if(Settings[S_MODEICON]){
-      MAX7456_WriteString(screenBuffer,getPosition(sensorPosition)+LINE);
+//    if (!screenPosition[ModePosition]<512)
+    if(fieldIsVisible(ModePosition))
+      MAX7456_WriteString(screenBuffer,getPosition(ModePosition));
     }
     if((MwSensorActive&mode.camstab)&&Settings[S_GIMBAL]){
       screenBuffer[2]=0;
       screenBuffer[0]=SYM_GIMBAL;
       screenBuffer[1]=SYM_GIMBAL1;  
-    MAX7456_WriteString(screenBuffer,getPosition(gimbalPosition));
+//    if (!screenPosition[gimbalPosition]<512)
+    if(fieldIsVisible(gimbalPosition))
+      MAX7456_WriteString(screenBuffer,getPosition(gimbalPosition));
     }
 
   if(Settings[S_MODESENSOR]){
     xx = 0;
-  if(MwSensorActive&mode.stable||MwSensorActive&mode.horizon){
-    screenBuffer[xx] = SYM_ACC;
-    xx++;
+    if(MwSensorActive&mode.passthru){
+      screenBuffer[xx] = SYM_MAN;  xx++;
+      screenBuffer[xx] = SYM_MAN1;  xx++;
+      screenBuffer[xx] = SYM_MAN2;  xx++;
     }
-  if (MwSensorActive&mode.mag){
-    screenBuffer[xx] = SYM_MAG;
-    xx++;
-  }
-  if (MwSensorActive&mode.baro){
-    screenBuffer[xx] = SYM_BAR;
-    xx++;
+  else {
+    if(MwSensorActive&mode.stable||MwSensorActive&mode.horizon){
+      screenBuffer[xx] = SYM_ACC;
+      xx++;
+    }
+    if (MwSensorActive&mode.baro){
+      screenBuffer[xx] = SYM_BAR;
+      xx++;
+    }
+    if (MwSensorActive&mode.mag){
+      screenBuffer[xx] = SYM_MAG;
+      xx++;
+    }
   }
   screenBuffer[xx] = 0;
-  MAX7456_WriteString(screenBuffer,getPosition(GPS_numSatPosition)+4);
+//  if (!screenPosition[sensorPosition]<512)
+  if(fieldIsVisible(sensorPosition))
+    MAX7456_WriteString(screenBuffer,getPosition(sensorPosition));
   }
 }
 
 void displayArmed(void)
 {
 #ifndef HIDEARMEDSTATUS
+  if(!fieldIsVisible(motorArmedPosition))
+    return;
   if(!armed){
     MAX7456_WriteString_P(disarmed_text, getPosition(motorArmedPosition));
     armedtimer=20;
@@ -212,8 +273,6 @@ void displayCallsign(int cposition)
 //************************************************************************************************************************************************************************************
 void displayHorizon(int rollAngle, int pitchAngle)
 {
-  if(!fieldIsVisible(horizonPosition))
-    return;
 
 #ifdef HORIZON
 
@@ -264,77 +323,91 @@ void displayHorizon(int rollAngle, int pitchAngle)
      SYM_AH_DECORATION_RIGHT=0x13;
   } 
   
-  uint16_t position = getPosition(horizonPosition);
+  uint16_t position = getPosition(horizonPosition)-(2*LINE);
 
   if(pitchAngle>200) pitchAngle=200;
   if(pitchAngle<-250) pitchAngle=-250;
   if(rollAngle>400) rollAngle=400;
   if(rollAngle<-400) rollAngle=-400;
-pitchAngle=pitchAngle+10;
-if(Settings[S_DISPLAY_HORIZON_BR]){
-  for(uint8_t X=0; X<=8; X++) {
-    if (X==3) X=6;
-    int Y = (rollAngle * (4-X)) / 64;
-    Y -= pitchAngle / 8;
-    Y += 41;
-    if(Y >= 0 && Y <= 81) {
-      uint16_t pos = position + LINE*(Y/9) + 3 - 2*LINE + X;
-      screen[pos] = SYM_AH_BAR9_0+(Y%9);
-    }
-  }
-        
-if (Settings[S_HORIZON_ELEVATION]){                   
+  pitchAngle=pitchAngle+10;
 
-    for(int X=2; X<=6; X++) {
-    if (X==4) X=5;
-    int Y = (rollAngle * (4-X)) / 64;
-    Y -= pitchAngle / 8;
-    Y += 41;
-    if(Y >= 0 && Y <= 81) {
-      uint16_t pos = position + LINE*(Y/9) + 3 - 2*LINE + X;
-    pos = pos - 3*LINE;
-    if(pos >= 60 && pos <= 360) 
-      screen[pos] = SYM_AH_BAR9_0+(Y%9);
-    pos = pos + 2*3*LINE;
-    if(pos >= 60 && pos <= 330) 
-      screen[pos] = SYM_AH_BAR9_0+(Y%9);
+  if(Settings[S_DISPLAY_HORIZON_BR]&fieldIsVisible(horizonPosition)){
+#ifdef FULLAHI
+    for(uint8_t X=0; X<=10; X++) {
+      if (X==4) X=7;
+      int Y = (rollAngle * (4-X)) / 64;
+      Y -= pitchAngle / 8;
+      Y += 41;
+      if(Y >= 0 && Y <= 81) {
+        uint16_t pos = position + LINE*(Y/9) + 3 - 2*LINE + X;
+        screen[pos] = SYM_AH_BAR9_0+(Y%9);
+      }
+    }
+#else
+    for(uint8_t X=0; X<=8; X++) {
+      if (X==3) X=6;
+      int Y = (rollAngle * (4-X)) / 64;
+      Y -= pitchAngle / 8;
+      Y += 41;
+      if(Y >= 0 && Y <= 81) {
+        uint16_t pos = position + LINE*(Y/9) + 3 - 2*LINE + X;
+        screen[pos] = SYM_AH_BAR9_0+(Y%9);
+      }
+    }
+#endif
+
+    if (Settings[S_HORIZON_ELEVATION]){                   
+      for(int X=2; X<=6; X++) { 
+        if (X==4) X=5;
+        int Y = (rollAngle * (4-X)) / 64;
+        Y -= pitchAngle / 8;
+        Y += 41;
+        if(Y >= 0 && Y <= 81) {
+          uint16_t pos = position + LINE*(Y/9) + 3 - 2*LINE + X;
+        pos = pos - 3*LINE;
+        if(pos >= 60 && pos <= 360) 
+          screen[pos] = SYM_AH_BAR9_0+(Y%9);
+        pos = pos + 2*3*LINE;
+        if(pos >= 60 && pos <= 330) 
+          screen[pos] = SYM_AH_BAR9_0+(Y%9);
+        }
+      }
+    }
+    if(!fieldIsVisible(MapModePosition)){
+      if(Settings[S_DISPLAY_HORIZON_BR]){
+        screen[position+2*LINE+7-1] = SYM_AH_CENTER_LINE;
+        screen[position+2*LINE+7+1] = SYM_AH_CENTER_LINE_RIGHT;
+        screen[position+2*LINE+7] =   SYM_AH_CENTER;
+      }
     }
   }
- 
-}
-}
-  if(!Settings[S_MAPMODE]){
-    if(Settings[S_DISPLAY_HORIZON_BR]){
-      screen[position+2*LINE+7-1] = SYM_AH_CENTER_LINE;
-      screen[position+2*LINE+7+1] = SYM_AH_CENTER_LINE_RIGHT;
-      screen[position+2*LINE+7] =   SYM_AH_CENTER;
-    }
-  }
-  if (Settings[S_WITHDECORATION]){
+
+  if (Settings[S_WITHDECORATION]&fieldIsVisible(SideBarPosition)){
     // Draw AH sides
     screen[position+2*LINE+1] =   SYM_AH_LEFT;
     screen[position+2*LINE+13] =  SYM_AH_RIGHT;
-  for(int X=0; X<=4; X++) {
-    screen[position+X*LINE] =     SYM_AH_DECORATION_LEFT;
-    screen[position+X*LINE+14] =  SYM_AH_DECORATION_RIGHT;
-  }
+    for(int X=0; X<=4; X++) {
+      screen[position+X*LINE] =     SYM_AH_DECORATION_LEFT;
+      screen[position+X*LINE+14] =  SYM_AH_DECORATION_RIGHT;
+    }
 
 #ifdef SBDIRECTION
-    if (Settings[S_SIDEBARTOPS]) {
+
+    if (Settings[S_SIDEBARTOPS]&fieldIsVisible(SideBarScrollPosition)) {
       if (millis()<(sidebarsMillis + 1000)) {
         if (sidebarsdir == 2){
-          screen[getPosition(horizonPosition)-LINE] = SYM_AH_DECORATION_UP;
+          screen[position-LINE] = SYM_AH_DECORATION_UP;
         }
         else{
-          screen[getPosition(horizonPosition)+5*LINE] = SYM_AH_DECORATION_DOWN;
+          screen[position+5*LINE] = SYM_AH_DECORATION_DOWN;
         }
       }
       if (millis()<(sidebaraMillis + 1000)) { 
         if (sidebaradir == 2){
-          screen[getPosition(horizonPosition)+14-LINE] = SYM_AH_DECORATION_UP;
+          screen[position+14-LINE] = SYM_AH_DECORATION_UP;
         }
         else{
-          screen[getPosition(horizonPosition)+5*LINE+14] = SYM_AH_DECORATION_DOWN;
+          screen[position+5*LINE+14] = SYM_AH_DECORATION_DOWN;
         }
       }
     }
@@ -356,20 +429,11 @@ void displayVoltage(void)
   }
 
   if (Settings[S_SHOWBATLEVELEVOLUTION]){
-    // For battery evolution display
-    int BATTEV1 =Settings[S_BATCELLS] * 35;
-    int BATTEV2 =Settings[S_BATCELLS] * 36;
-    int BATTEV3 =Settings[S_BATCELLS] * 37;
-    int BATTEV4 =Settings[S_BATCELLS] * 38;
-    int BATTEV5 =Settings[S_BATCELLS] * 40;
-    int BATTEV6 = Settings[S_BATCELLS] * 41;
-    if (voltage < BATTEV1) screenBuffer[0]=SYM_BATT_EMPTY;
-    else if (voltage < BATTEV2) screenBuffer[0]=SYM_BATT_1;
-    else if (voltage < BATTEV3) screenBuffer[0]=SYM_BATT_2;
-    else if (voltage < BATTEV4) screenBuffer[0]=SYM_BATT_3;
-    else if (voltage < BATTEV5) screenBuffer[0]=SYM_BATT_4;
-    else if (voltage < BATTEV6) screenBuffer[0]=SYM_BATT_5;
-    else screenBuffer[0]=SYM_BATT_FULL;                              // Max charge icon
+
+    int battev=voltage/Settings[S_BATCELLS];
+    battev=constrain(battev,34,42);
+    battev = map(battev, 34, 42, 0, 6);
+    screenBuffer[0]=SYM_BATT_EMPTY-battev;
   }
   else {
     screenBuffer[0]=SYM_MAIN_BATT;
@@ -423,6 +487,9 @@ void displayTime(void)
 { 
   if(!Settings[S_TIMER])
     return;
+  if (screenPosition[onTimePosition]<512)
+    return;
+
   uint32_t displaytime;
   if (armed) { 
     if(flyTime < 3600) {
@@ -453,9 +520,9 @@ void displayAmperage(void)
 {
   if(!fieldIsVisible(amperagePosition))
     return;
-  ItoaPadded(amperage, screenBuffer, 4, 3);     // 99.9 ampere max!
-  screenBuffer[4] = SYM_AMP;
-  screenBuffer[5] = 0;
+  ItoaPadded(amperage, screenBuffer, 5, 4);     // 999.9 ampere max!
+  screenBuffer[5] = SYM_AMP;
+  screenBuffer[6] = 0;
   MAX7456_WriteString(screenBuffer,getPosition(amperagePosition));
 }
 
@@ -471,6 +538,19 @@ void displaypMeterSum(void)
 }
 
 
+void displayI2CError(void)
+{
+#ifdef I2CERROR
+  if (I2CError<=I2CERROR)
+    return;
+  screenBuffer[0] = 0x49;
+  screenBuffer[1] = 0X3A;
+  itoa(I2CError,screenBuffer+2,7);
+  MAX7456_WriteString(screenBuffer,getPosition(temperaturePosition));
+#endif
+}
+
+
 void displayRSSI(void)
 {
   if(!fieldIsVisible(rssiPosition))
@@ -480,9 +560,27 @@ void displayRSSI(void)
   uint8_t xx = FindNull();
   screenBuffer[xx++] = '%';
   screenBuffer[xx] = 0;
-  MAX7456_WriteString(screenBuffer,getPosition(rssiPosition));
+  MAX7456_WriteString(screenBuffer,getPosition(rssiPosition)-1);
 }
 
+
+void displayAPstatus()
+{
+  if(timer.Blink2hz)
+    return;
+  if(!fieldIsVisible(APstatusPosition))
+    return;
+  if (MwSensorActive&mode.gpshome)
+    MAX7456_WriteString_P(APRTHtext,getPosition(APstatusPosition));
+  else if (MwSensorActive&mode.gpshold)
+    MAX7456_WriteString_P(APHOLDtext,getPosition(APstatusPosition));
+  else if (MwSensorActive&mode.gpsmission)
+    MAX7456_WriteString_P(APWAYPOINTtext,getPosition(APstatusPosition));
+//  else if (MwSensorActive&mode.gpsland)
+//    MAX7456_WriteString_P(APLANDtext,getPosition(APstatusPosition));
+ 
+
+}
 
 void displayHeading(void)
 {
@@ -517,21 +615,38 @@ void displayHeadingGraph(void)
   xx = MwHeading * 4;
   xx = xx + 720 + 45;
   xx = xx / 90;
-  uint16_t pos = getPosition(MwHeadingGraphPosition)+1;
+  uint16_t pos = getPosition(MwHeadingGraphPosition);
   memcpy_P(screen+pos, headGraph+xx+1, 9);
 }
 
 
 void displayIntro(void)
 {
-
   MAX7456_WriteString_P(message0, MWOSDVersionPosition);
-  MAX7456_WriteString_P(message5, MWOSDVersionPosition+LINE+LINE+LINE);
-  MAX7456_WriteString(itoa(MwVersion,screenBuffer,10),MWOSDVersionPosition+11+LINE+LINE+LINE);
-#ifdef CALLSIGNSTARTUP
-  MAX7456_WriteString_P(message9, MWOSDVersionPosition+LINE+LINE+LINE+LINE);
-  displayCallsign(MWOSDVersionPosition+LINE+LINE+LINE+LINE+4);
+  MAX7456_WriteString_P(message5, MWOSDVersionPosition+LINE+LINE);
+  MAX7456_WriteString(ItoaPadded(MwVersion, screenBuffer, 4, 2),MWOSDVersionPosition+11+LINE+LINE+1);
+#ifdef INTRO_CALLSIGN
+  MAX7456_WriteString_P(message9, MWOSDVersionPosition+LINE+LINE+LINE);
+  displayCallsign(MWOSDVersionPosition+LINE+LINE+LINE+4);
 #endif   
+#ifdef GPSTIME
+#ifdef INTRO_TIMEZONE
+//timezone
+  MAX7456_WriteString_P(message10, MWOSDVersionPosition+LINE+LINE+LINE+LINE); 
+  if(abs(Settings[S_GPSTZ]) >= 100)ItoaPadded(Settings[S_GPSTZ], screenBuffer, 5, 4);
+  else ItoaPadded(Settings[S_GPSTZ], screenBuffer, 4, 3);
+  if(Settings[S_GPSTZAHEAD] || Settings[S_GPSTZ] == 0)screenBuffer[0] = '+';
+  else screenBuffer[0] = '-';   
+  MAX7456_WriteString(screenBuffer, MWOSDVersionPosition+LINE+LINE+LINE+LINE+8); 
+//more settings
+  MAX7456_WriteString_P(message11, MWOSDVersionPosition+LINE+LINE+LINE+LINE+LINE+LINE+LINE+LINE+LINE+LINE);
+#endif
+#endif
+#ifdef INTRO_MENU
+  MAX7456_WriteString_P(message6, MWOSDVersionPosition+LINE+LINE+LINE+LINE+LINE+LINE);
+  MAX7456_WriteString_P(message7,  MWOSDVersionPosition+LINE+LINE+LINE+LINE+LINE+LINE+LINE+10);
+  MAX7456_WriteString_P(message8,  MWOSDVersionPosition+LINE+LINE+LINE+LINE+LINE+LINE+LINE+LINE+10); 
+ #endif 
 }
 
 
@@ -662,18 +777,17 @@ void displayClimbRate(void)
     return;
   if(!Settings[S_VARIO])
     return;
-    uint16_t position = getPosition(horizonPosition);
-    for(int X=1; X<=3; X++) {
-      screen[position+X*LINE+15] =  0x7F;
+    uint16_t position = getPosition(MwClimbRatePosition);
+    for(int8_t X=-1; X<=1; X++) {
+      screen[position+(X*LINE)] =  SYM_VARIO;
     }
-   position=position+LINE;
    int8_t xx=MwVario;
    if (MwVario>120) xx=120;
    if (MwVario<-120) xx=-120;
    xx=map(xx,120,-120,0,17);
-   int8_t varline=xx/6;
+   int8_t varline=(xx/6)-1;
    int8_t varsymbol=xx%6;
-   screen[position+(varline*LINE)+15] = 0x8F-varsymbol;
+   screen[position+(varline*LINE)] = 0x8F-varsymbol;
 }
 
 
@@ -681,6 +795,7 @@ void displayDistanceToHome(void)
 {
   if(!GPS_fix)
     return;
+
   int16_t dist;
   if(Settings[S_UNITSYSTEM])
     dist = GPS_distanceToHome * 3.2808;           // mt to feet
@@ -717,13 +832,12 @@ void displayDirectionToHome(void)
 {
   if(!GPS_fix)
     return;
+  if (screenPosition[GPS_directionToHomePosition]<512)
+    return;
+
   if(GPS_distanceToHome <= 2 && timer.Blink2hz)
     return;
-  uint16_t position;
-  if ((MwSensorActive&mode.osd_switch))
-    position=getPosition(GPS_directionToHomePositionBottom);
-  else
-    position=getPosition(GPS_directionToHomePosition);
+  uint16_t position=getPosition(GPS_directionToHomePosition);
   int16_t d = MwHeading + 180 + 360 - GPS_directionToHome;
   d *= 4;
   d += 45;
@@ -745,10 +859,13 @@ void displayCursor(void)
   }
   if(ROW<10)
     {
+#ifdef PAGE0      
     if(configPage==0)
       {
       ROW=10;
       }
+#endif      
+#ifdef PAGE1
     if(configPage==1){
       if (ROW==8) ROW=10;
       if (ROW==9) ROW=7;
@@ -757,24 +874,32 @@ void displayCursor(void)
       if(COL==3) cursorpos=(ROW+2)*30+10+6+6;
       if(ROW==7) {cursorpos=(ROW+2)*30+10;COL=1;}
      }
+#endif
+#ifdef PAGE2
     if(configPage==2){
       COL=3;
       if (ROW==6) ROW=10;
       if (ROW==9) ROW=5;
       cursorpos=(ROW+2)*30+10+6+6;
       }
+#endif
+#ifdef PAGE3      
     if(configPage==3){
       COL=3;
       if (ROW==8) ROW=10;
       if (ROW==9) ROW=7;
       cursorpos=(ROW+2)*30+10+6+6;     
       }
+#endif
+#ifdef PAGE4      
     if(configPage==4){
       COL=3;
       if (ROW==7) ROW=10;
       if (ROW==9) ROW=6;
       cursorpos=(ROW+2)*30+10+6+6;
       }    
+#endif
+#ifdef PAGE5      
     if(configPage==5)
       {  
       COL=3;
@@ -782,11 +907,23 @@ void displayCursor(void)
       if (ROW==6) ROW=10;
       cursorpos=(ROW+2)*30+10+6+6;
       }
+#endif
+#ifdef PAGE6      
     if(configPage==6)
       {  
-      COL=3;
+        if (ROW==9){
+          if (oldROW==8)
+            ROW=10;
+          else
+            ROW=8;
+        }
+        oldROW=ROW;
+
+        COL=3;
       cursorpos=(ROW+2)*30+10+6+6;
       }
+#endif
+#ifdef PAGE7      
     if(configPage==7)
       {  
       COL=3;
@@ -794,6 +931,8 @@ void displayCursor(void)
       if (ROW==6) ROW=10;
        cursorpos=(ROW+2)*30+10+6+6;
       }
+#endif
+#ifdef PAGE8      
     if(configPage==8)
       {  
       COL=3;
@@ -801,6 +940,7 @@ void displayCursor(void)
       if (ROW==4) ROW=10;
        cursorpos=(ROW+2)*30+10+6+6;
       }
+#endif     
   }
   if(timer.Blink10hz)
     screen[cursorpos] = SYM_CURSOR;
@@ -842,7 +982,7 @@ void displayConfigScreen(void)
     formatTime(flyingTime, screenBuffer, 1);
     MAX7456_WriteString(screenBuffer,LEVD-4);
     }
-
+#ifdef PAGE1
   if(configPage==1)
   {
     MAX7456_WriteString_P(configMsg10, 35);
@@ -883,7 +1023,10 @@ void displayConfigScreen(void)
     MAX7456_WriteString("I",77);
     MAX7456_WriteString("D",83);
   }
-
+#else
+    if(configPage == 1)configPage+=menudir;
+#endif
+#ifdef PAGE2
   if(configPage==2)
   {
     MAX7456_WriteString_P(configMsg20, 35);
@@ -899,7 +1042,10 @@ void displayConfigScreen(void)
     MAX7456_WriteString(itoa(dynThrPID,screenBuffer,10),VELD);
 
   }
-
+ #else
+    if(configPage == 2)configPage+=menudir; 
+#endif
+#ifdef PAGE3
   if(configPage==3)
   {
     ProcessSensors();
@@ -953,7 +1099,10 @@ void displayConfigScreen(void)
     MAX7456_WriteString_P(configMsg32, MAGT);
     MAX7456_WriteString(itoa(Settings[S_VIDDIVIDERRATIO],screenBuffer,10),MAGD);
   }
-
+#else
+    if(configPage == 3)configPage+=menudir;  
+#endif
+#ifdef PAGE4
   if(configPage==4)
   {
     MAX7456_WriteString_P(configMsg40, 35);
@@ -1004,7 +1153,10 @@ void displayConfigScreen(void)
     MAX7456_WriteString(itoa(Settings[S_RSSIMIN],screenBuffer,10),LEVD);
 
   }
-
+#else
+    if(configPage == 4)configPage+=menudir;  
+#endif
+#ifdef PAGE5
   if(configPage==5)
   {
     MAX7456_WriteString_P(configMsg50, 35);
@@ -1046,7 +1198,10 @@ void displayConfigScreen(void)
     MAX7456_WriteString(itoa(Settings[S_AMPMIN],screenBuffer,10),VELD);
 //    MAX7456_WriteString(itoa(amperage,screenBuffer,10),ROLLD-LINE-LINE);
   }
-  
+#else
+    if(configPage == 5)configPage+=menudir;  
+#endif
+#ifdef PAGE6
   if(configPage==6)
   {
     MAX7456_WriteString_P(configMsg60, 35);
@@ -1118,7 +1273,10 @@ void displayConfigScreen(void)
       MAX7456_WriteString_P(configMsgOFF, MAGD+LINE);
     }   
   }
-
+#else
+    if(configPage == 6)configPage+=menudir;  
+#endif
+#ifdef PAGE7
   if(configPage==7)
   {
     MAX7456_WriteString_P(configMsg70, 35);
@@ -1146,7 +1304,7 @@ void displayConfigScreen(void)
     else {
       MAX7456_WriteString_P(configMsg731, YAWD);
       }
-//R4:
+//R5:
     MAX7456_WriteString_P(configMsg74, ALTT);
     if(Settings[S_DEBUG]){
       MAX7456_WriteString_P(configMsgON, ALTD);
@@ -1154,14 +1312,17 @@ void displayConfigScreen(void)
     else {
       MAX7456_WriteString_P(configMsgOFF, ALTD);
       }
-//R5:
+//R6:
     MAX7456_WriteString_P(configMsg75, VELT);
     if(timer.magCalibrationTimer>0)
       MAX7456_WriteString(itoa(timer.magCalibrationTimer,screenBuffer,10),VELD);
     else
       MAX7456_WriteString("-",VELD);
    }
-
+#else
+    if(configPage == 7)configPage+=menudir;
+#endif
+#ifdef PAGE8
   if(configPage==8)
   {
     MAX7456_WriteString_P(configMsg80, 35);
@@ -1186,6 +1347,10 @@ void displayConfigScreen(void)
     MAX7456_WriteString_P(configMsg83, YAWT);
     MAX7456_WriteString(itoa(Settings[S_GPSTZ],screenBuffer,10),YAWD);
   }    
+#else
+    if(configPage == 8)configPage+=menudir;
+    if(configPage > MAXPAGE)configPage=MINPAGE;
+#endif  
   displayCursor();
 }
 
@@ -1193,9 +1358,13 @@ void mapmode(void) {
 
 #ifdef MAPMODE
 
-  if ((MwSensorActive&mode.osd_switch))
-  return;
-
+  if(!GPS_fix)
+    return;
+  if(!fieldIsVisible(MapModePosition))
+    return;
+//  if(!Settings[S_MAPMODE]) 
+//    return;
+    
   int8_t xdir;
   int8_t ydir;
   int16_t targetx;
@@ -1209,11 +1378,11 @@ void mapmode(void) {
   uint8_t mapsymboltarget;
   uint8_t mapsymbolrange;
   int16_t tmp;
-  if (MAPMODE==1) {
+  if (MAPTYPE==1) {
     angle=(180+360+GPS_directionToHome-armedangle)%360;
   }
   else {
-    angle=GPS_directionToHome;  
+    angle=(360+GPS_directionToHome-MwHeading)%360;  
   }
   tmp = angle/90;
   switch (tmp) {
@@ -1239,8 +1408,8 @@ void mapmode(void) {
     }  
 
   float rad  = angle * PI / 180;    // convert to radians  
-  uint16_t x = GPS_distanceToHome * sin(rad);
-  uint16_t y = GPS_distanceToHome * cos(rad);
+  uint16_t x = (uint16_t)(GPS_distanceToHome * sin(rad));
+  uint16_t y = (uint16_t)(GPS_distanceToHome * cos(rad));
 
   if (y > x) maxdistance=y;
   else maxdistance=x;
@@ -1261,13 +1430,19 @@ void mapmode(void) {
     mapsymbolrange=SYM_RANGE_MAX;
   }
 
-  targetx = xdir*map(x, 0, range, 0, 5);
-  targety = ydir*map(y, 0, range, 0, 5);
-  
-  centerpos=getPosition(horizonPosition)+67;
-  targetpos= centerpos + targetx + (LINE*targety); 
+  targetx = xdir*map(x, 0, range, 0, 16);
+  targety = ydir*map(y, 0, range, 0, 15);
 
-  if (MAPMODE==1) {
+  if (maxdistance<20) {
+    targetx = 0;
+    targety = 0;  
+  }
+    
+  centerpos=getPosition(MapCenterPosition);
+  targetpos= centerpos + (targetx/2) + (LINE*(targety/3)); 
+
+
+  if (MAPTYPE==1) {
     mapsymbolcenter = SYM_HOME;
     mapsymboltarget = SYM_AIRCRAFT;
   }
@@ -1275,32 +1450,48 @@ void mapmode(void) {
     mapsymbolcenter = SYM_AIRCRAFT;
     mapsymboltarget = SYM_HOME;
   }
-  
-  screenBuffer[0] = mapsymbolcenter;
-  screenBuffer[1] = 0;
-  MAX7456_WriteString(screenBuffer,centerpos);
-
-  if (MAPMODE==1) {
-    tmp=(360+382+MwHeading-armedangle)%360/45;
-    screenBuffer[0] = SYM_DIRECTION + tmp;
-  }
-  else {
-    screenBuffer[0] = mapsymboltarget;
-  }
-
-  screenBuffer[1] = 0;
-  MAX7456_WriteString(screenBuffer,targetpos);
 
   screenBuffer[0] = mapsymbolrange;
   screenBuffer[1] = 0;
-  MAX7456_WriteString(screenBuffer,getPosition(GPS_directionToHomePosition)+LINE);
+  MAX7456_WriteString(screenBuffer,getPosition(MapModePosition));
+
+#ifdef MAPRESLOW
+  if (MAPTYPE==1) {
+    tmp=(360+382+MwHeading-armedangle)%360/45;
+    mapsymboltarget = SYM_DIRECTION + tmp;
+  }
+#else
+    int8_t symx = (int8_t)abs(targetx)%2;
+    int8_t symy = (int8_t)abs(targety)%3;
+    if (ydir==1)
+      symy=2-symy;
+    if (xdir==-1)
+      symx=1-symx;
+    if (abs(targety)<3)
+      symy = 1 - ydir;
+    if (abs(targetx)<2){
+      if (targetx<0)
+        symx=0;
+      else
+        symx=1;
+    }
+    mapsymboltarget = 0xD0 + symy + (symx*3);
+#endif
+
+  screenBuffer[0] = mapsymboltarget;
+  screenBuffer[1] = 0;
+  MAX7456_WriteString(screenBuffer,targetpos);
+
+  screenBuffer[0] = mapsymbolcenter;
+  screenBuffer[1] = 0;
+  MAX7456_WriteString(screenBuffer,centerpos);
  
 #endif
 }
 
 void displayDebug(void)
 {
-#if defined DEBUG
+#if defined (DEBUG)||defined (DEBUGMW)
   if(!Settings[S_DEBUG])
     return;
  
@@ -1308,78 +1499,47 @@ void displayDebug(void)
 //  debug[0]=(int16_t)heapptr;
 //  debug[1]=(int16_t)stackptr;
 
-  debug[0]=sensorfilter[0][SENSORFILTERSIZE];
-  debug[1]=sensorfilter[0][SENSORFILTERSIZE+1];
-  debug[2]=sensorfilter[0][0];
-//  debug[3]=sensorfilter[3][SENSORFILTERSIZE];
+//  debug[0]=I2CError;
+//  debug[1]=MWOSDVER;
+//  debug[2]=MwVersion;
+//  debug[3]=MWOSDVER;
 
   for(uint8_t X=0; X<4; X++) {
     ItoaPadded(debug[X], screenBuffer+2,7,0);     
     screenBuffer[0] = 0x30+X;
     screenBuffer[1] = 0X3A;
     MAX7456_WriteString(screenBuffer,getPosition(debugPosition)+(X*LINE));
-  }  
+  } 
+ 
 #endif
 }
 
 void displayCells(void){
 
   #ifndef MIN_CELL
-    #define MIN_CELL 300
+    #define MIN_CELL 320
   #endif
-    uint16_t sum = 0;
-    uint16_t low = 0;
-    uint8_t cells = 0;   
+  uint16_t sum = 0;
+  uint16_t low = 0;
+  uint8_t cells = 0;   
   
-    for(uint8_t i=0; i<6; i++) {
-      
-      uint16_t volt = cell_data[i];
-      if(!volt)continue;//empty cell
-      ++cells;
-      sum += volt;
-      if(volt < low || !low)low = volt;
-      
-      if((volt>MIN_CELL)||(timer.Blink2hz)){
-       
-/*
-Suggestion to replace below?
-        if (volt < 300) {
-          screenBuffer[i]=0xFF;//Min
-        }
-        else {
-          uint8_t xx=volt;
-          if (volt>=415) volt=415;
-          if (volt<350) volt=350;
-          xx=map(volt,350,415,0,14);
-          screenBuffer[i]=0xF0+xx;
-        }
-*/
-
-        if (volt < 300) screenBuffer[i]=SYM_CELL0;//Min
-          else if (volt < 350) screenBuffer[i]=SYM_CELL1;
-          else if (volt < 355) screenBuffer[i]=SYM_CELL2;
-          else if (volt < 360) screenBuffer[i]=SYM_CELL3;
-          else if (volt < 365) screenBuffer[i]=SYM_CELL4;
-          else if (volt < 370) screenBuffer[i]=SYM_CELL5;
-          else if (volt < 375) screenBuffer[i]=SYM_CELL6;
-          else if (volt < 380) screenBuffer[i]=SYM_CELL7;
-          else if (volt < 385) screenBuffer[i]=SYM_CELL8;
-          else if (volt < 390) screenBuffer[i]=SYM_CELL9;
-          else if (volt < 395) screenBuffer[i]=SYM_CELLA;
-          else if (volt < 400) screenBuffer[i]=SYM_CELLB;
-          else if (volt < 405) screenBuffer[i]=SYM_CELLC;
-          else if (volt < 410) screenBuffer[i]=SYM_CELLD;
-          else if (volt < 415) screenBuffer[i]=SYM_CELLE;
-          else screenBuffer[i]=SYM_CELLF;//Max
-     
-      }else screenBuffer[i]=' ';
-      
+  for(uint8_t i=0; i<6; i++) {
+    uint16_t volt = cell_data[i];
+    if(!volt)continue;//empty cell
+    ++cells;
+    sum += volt;
+    if(volt < low || !low)low = volt;
+    if((volt>MIN_CELL)||(timer.Blink2hz)){
+      int tempvolt=constrain(volt,300,415);
+      tempvolt = map(tempvolt,300,415,0,14);
+      screenBuffer[i]=SYM_CELL0+tempvolt;
+      }
+      else screenBuffer[i]=' ';      
     }
     
     if(cells){
-        screenBuffer[cells] = 0;       
-        MAX7456_WriteString(screenBuffer,getPosition(MwAltitudePosition)+(2*LINE)-1+(6-cells));//bar chart
-    
+      screenBuffer[cells] = 0;       
+      MAX7456_WriteString(screenBuffer,getPosition(SportPosition)+(6-cells));//bar chart
 
       ItoaPadded(low, screenBuffer+1,4,2);
       screenBuffer[0] = SYM_MIN;
@@ -1387,8 +1547,7 @@ Suggestion to replace below?
       screenBuffer[6] = 0;
     
     if((low>MIN_CELL)||(timer.Blink2hz))
-          MAX7456_WriteString(screenBuffer,getPosition(MwAltitudePosition)+(3*LINE)-1);//lowest
-    
+      MAX7456_WriteString(screenBuffer,getPosition(SportPosition)+LINE);//lowest
     
       uint16_t avg = 0;
       if(cells)avg = sum / cells;
@@ -1398,7 +1557,6 @@ Suggestion to replace below?
       screenBuffer[6] = 0;
     
     if((avg>MIN_CELL)||(timer.Blink2hz))
-          MAX7456_WriteString(screenBuffer,getPosition(MwAltitudePosition)+(4*LINE)-1);//average     
+      MAX7456_WriteString(screenBuffer,getPosition(SportPosition)+(2*LINE));//average     
   }
-  
 }

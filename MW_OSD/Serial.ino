@@ -1,5 +1,5 @@
 
-#define SERIALBUFFERSIZE 256
+#define SERIALBUFFERSIZE 300
 static uint8_t serialBuffer[SERIALBUFFERSIZE]; // this hold the imcoming string from serial O string
 static uint8_t receiverIndex;
 static uint8_t dataSize;
@@ -31,6 +31,7 @@ void serialMSPCheck()
 
   if (cmdMSP == MSP_OSD) {
     uint8_t cmd = read8();
+
     if(cmd == OSD_READ_CMD) {
       uint8_t txCheckSum, txSize;
       headSerialRequest();
@@ -50,16 +51,48 @@ void serialMSPCheck()
       
     }
 
+/*
+    if (cmd == OSD_SENSORS) {
+      uint8_t txCheckSum, txSize;
+      uint16_t osd_voltage,osd_vidvoltage,osd_RSSI,osd_amperage;
+      headSerialRequest();
+      txCheckSum=0;
+      txSize = 8; // no. bytes to tx
+      Serial.write(txSize);
+      txCheckSum ^= txSize;
+      Serial.write(OSD_SENSORS);
+      txCheckSum ^= OSD_SENSORS;
+      Serial.write(cmd);
+      txCheckSum ^= cmd;
+
+      Serial.write(osd_voltage);
+      txCheckSum ^= osd_voltage;
+      Serial.write(osd_vidvoltage);
+      txCheckSum ^= osd_vidvoltage;
+      Serial.write(osd_RSSI);
+      txCheckSum ^= osd_RSSI;
+      Serial.write(osd_amperage);
+      txCheckSum ^= osd_amperage;
+
+      Serial.write(txCheckSum);
+    }
+*/
+
     if (cmd == OSD_WRITE_CMD) {
       for(uint8_t en=0;en<EEPROM_SETTINGS; en++){
 	uint8_t inSetting = read8();
-	if (inSetting != Settings[en])
-	  EEPROM.write(en,inSetting);
-	Settings[en] = inSetting;
+        EEPROM.write(en,inSetting);
       }
+
+      for(uint8_t en=0;en<(POSITIONS_SETTINGS*2*2); en++){ // 2 Huds, 2 * 8 bit settings
+	uint8_t inSetting = read8();
+	EEPROM.write(EEPROM_SETTINGS+en,inSetting);
+      }
+      EEPROM.write(0,MWOSDVER);
       readEEPROM();
       setMspRequests();
     }
+
 
     if(cmd == OSD_GET_FONT) {
       if(dataSize == 5) {
@@ -67,7 +100,7 @@ void serialMSPCheck()
           nextCharToRequest = read8();
           lastCharToRequest = read8();
           initFontMode();
-      }
+        }
       }
       else if(dataSize == 56) {
         for(uint8_t i = 0; i < 54; i++)
@@ -79,11 +112,11 @@ void serialMSPCheck()
       }
     }
     if(cmd == OSD_DEFAULT) {
-    EEPROM.write(0,0);
-    resetFunc();
+        EEPROM.write(0,0);
+        resetFunc();
     }
     if(cmd == OSD_RESET) {
-    resetFunc();
+        resetFunc();
     }
     if(cmd == OSD_SERIAL_SPEED) {
     
@@ -144,7 +177,20 @@ void serialMSPCheck()
     
     GPS_directionToHome=read16();
     read8(); //missing
+#ifdef GPSTIME
     GPS_time = read32();        //local time of coord calc - haydent
+#endif
+  }
+
+  if (cmdMSP==MSP_NAV_STATUS)
+  {
+     read8();
+     read8();
+     read8();
+     GPS_waypoint_step=read8();
+     read8();
+     read8();
+     read8();
   }
 
   if (cmdMSP==MSP_ATTITUDE)
@@ -152,18 +198,18 @@ void serialMSPCheck()
     for(uint8_t i=0;i<2;i++)
       MwAngle[i] = read16();
     MwHeading = read16();
-#ifdef BASEFLIGHT
+#ifdef HEADINGCORRECT
     if (MwHeading >= + 180) MwHeading -= 360;
 #endif
     read16();
   }
 
-#if defined DEBUG
+#if defined DEBUGMW
   if (cmdMSP==MSP_DEBUG)
   {
-    for(uint8_t i=0;i<3;i++)
+    for(uint8_t i=0;i<4;i++)
       debug[i] = read16();
-  }
+ }
 #endif
   if (cmdMSP==MSP_CELLS)
   {
@@ -182,7 +228,10 @@ void serialMSPCheck()
     pMeterSum=read16();
     MwRssi = read16();
     MWAmperage = read16();
-  }
+ #ifdef AMPERAGECORRECT
+    MWAmperage = MWAmperage * 10;
+#endif
+ }
 
   if (cmdMSP==MSP_RC_TUNING)
   {
@@ -252,6 +301,7 @@ void serialMSPCheck()
           if(lastc == 'D') // "GPS HOLD;"
             mode.gpshold |= bit;
         }
+        if(firstc == 'P' && lastc == 'U')  mode.passthru |= bit; // "Passthru;"
         if(firstc == 'O' && lastc == 'W') // "OSD SW;"
           mode.osd_switch |= bit;
 
@@ -275,7 +325,10 @@ void serialMSPCheck()
     mode.mag = 0;
     mode.gpshome = 0;
     mode.gpshold = 0;
+    mode.gpsmission = 0;
+    mode.gpsland = 0;
     mode.llights = 0;
+    mode.passthru = 0;
     mode.osd_switch = 0;
     mode.camstab = 0;
 
@@ -306,11 +359,20 @@ void serialMSPCheck()
       case 11:
         mode.gpshold |= bit;
         break;
+      case 12:
+        mode.passthru  |= bit;
+        break;
       case 16:
         mode.llights |= bit;
         break;
       case 19:
         mode.osd_switch |= bit;
+        break;
+      case 20:
+        mode.gpsmission |= bit;
+        break;
+      case 21:
+        mode.gpsland |= bit;
         break;
       }
       bit <<= 1;
@@ -356,12 +418,7 @@ void handleRawRC() {
 	waitStick = 2;
 	configExit();
       }
-      if(!previousarmedstatus&&configMode&&(MwRcData[THROTTLESTICK]<MINSTICK)) // EXIT
-      {
-	waitStick = 2;
-	configExit();
-      }
-      else if(configMode&&(MwRcData[ROLLSTICK]>MAXSTICK)) // MOVE RIGHT
+if(configMode&&(MwRcData[ROLLSTICK]>MAXSTICK)) // MOVE RIGHT
       {
 	waitStick = 1;
 	COL++;
@@ -407,12 +464,17 @@ void handleRawRC() {
       stickTime = millis();
   }
 }
-void serialMenuCommon()
-{
-	if((ROW==10)&&(COL==3)) configPage=configPage+menudir;
-	if(configPage<MINPAGE) configPage = MAXPAGE;
-	if(configPage>MAXPAGE) configPage = MINPAGE;
 
+void serialMenuCommon()
+  {
+    if((ROW==10)&&(COL==3)) configPage=configPage+menudir;
+    if(configPage<MINPAGE) configPage = MAXPAGE;
+    if(configPage>MAXPAGE) configPage = MINPAGE;
+
+#ifdef PAGE0
+//comment
+#endif
+#ifdef PAGE1
 	if(configPage == 1) {
 	  if(ROW >= 1 && ROW <= 5) {
 	    if(COL==1) P8[ROW-1]=P8[ROW-1]+menudir;
@@ -428,7 +490,8 @@ void serialMenuCommon()
 
 	  if((ROW==7)&&(COL==1)) P8[8]=P8[8]+menudir;
 	}
-
+#endif
+#ifdef PAGE2
 	if(configPage == 2 && COL == 3) {
 	  if(ROW==1) rcRate8=rcRate8+menudir;
 	  if(ROW==2) rcExpo8=rcExpo8+menudir;
@@ -436,43 +499,41 @@ void serialMenuCommon()
 	  if(ROW==4) yawRate=yawRate+menudir;
 	  if(ROW==5) dynThrPID=dynThrPID+menudir;
 	}
-
+#endif
+#ifdef PAGE3
 	if(configPage == 3 && COL == 3) {
+	  if(ROW==1) Settings[S_DISPLAYVOLTAGE]=!Settings[S_DISPLAYVOLTAGE];  
 	  if(ROW==2) Settings[S_DIVIDERRATIO]=Settings[S_DIVIDERRATIO]+menudir;
 	  if(ROW==3) Settings[S_VOLTAGEMIN]=Settings[S_VOLTAGEMIN]+menudir;
+	  if(ROW==4) Settings[S_VIDVOLTAGE]=!Settings[S_VIDVOLTAGE];
 	  if(ROW==5) Settings[S_BATCELLS]=Settings[S_BATCELLS]+menudir;
+	  if(ROW==6) Settings[S_MAINVOLTAGE_VBAT]=!Settings[S_MAINVOLTAGE_VBAT];
 	  if(ROW==7) Settings[S_VIDDIVIDERRATIO]=Settings[S_VIDDIVIDERRATIO]+menudir;
 	}
+#endif
+#ifdef PAGE4
 
-	if(configPage == 4 && COL == 3) {
-	  if(ROW==5) Settings[S_RSSIMAX]=Settings[S_RSSIMAX]+menudir;
-	  if(ROW==6) Settings[S_RSSIMIN]=Settings[S_RSSIMIN]+menudir;
-	}
-
-	if(configPage == 5 && COL == 3) {
-	  if(ROW==4) S16_AMPMAX=S16_AMPMAX+menudir;
-	  if(ROW==5) Settings[S_AMPMIN]=Settings[S_AMPMIN]+menudir;
-	}
   
-  	if(configPage == 3 && COL == 3) {
-	  if(ROW==1) Settings[S_DISPLAYVOLTAGE]=!Settings[S_DISPLAYVOLTAGE];
-	  if(ROW==4) Settings[S_VIDVOLTAGE]=!Settings[S_VIDVOLTAGE];
-	  if(ROW==6) Settings[S_MAINVOLTAGE_VBAT]=!Settings[S_MAINVOLTAGE_VBAT];
-	}
 
 	if(configPage == 4 && COL == 3) {
 	  if(ROW==1) Settings[S_DISPLAYRSSI]=!Settings[S_DISPLAYRSSI];
 	  if(ROW==2) timer.rssiTimer=15; // 15 secs to turn off tx anwait to read min RSSI
 	  if(ROW==3) Settings[S_MWRSSI]=!Settings[S_MWRSSI];
 	  if(ROW==4) Settings[S_PWMRSSI]=!Settings[S_PWMRSSI];
+	  if(ROW==5) Settings[S_RSSIMAX]=Settings[S_RSSIMAX]+menudir;
+	  if(ROW==6) Settings[S_RSSIMIN]=Settings[S_RSSIMIN]+menudir;
 	}
-
+#endif
+#ifdef PAGE5
 	if(configPage == 5 && COL == 3) {
 	  if(ROW==1) Settings[S_AMPERAGE]=!Settings[S_AMPERAGE];
 	  if(ROW==2) Settings[S_AMPER_HOUR]=!Settings[S_AMPER_HOUR];
 	  if(ROW==3) Settings[S_AMPERAGE_VIRTUAL]=!Settings[S_AMPERAGE_VIRTUAL];
+	  if(ROW==4) S16_AMPMAX=S16_AMPMAX+menudir;
+	  if(ROW==5) Settings[S_AMPMIN]=Settings[S_AMPMIN]+menudir;
 	}
-
+#endif
+#ifdef PAGE6
 	if(configPage == 6 && COL == 3) {
 	  if(ROW==1) Settings[S_DISPLAY_HORIZON_BR]=!Settings[S_DISPLAY_HORIZON_BR];
 	  if(ROW==2) Settings[S_WITHDECORATION]=!Settings[S_WITHDECORATION];
@@ -483,7 +544,8 @@ void serialMenuCommon()
 	  if(ROW==7) Settings[S_GIMBAL]=!Settings[S_GIMBAL];
 	  if(ROW==8) Settings[S_MAPMODE]=!Settings[S_MAPMODE];
 	}
-
+#endif
+#ifdef PAGE7
 	if(configPage == 7 && COL == 3) {
 	  if(ROW==1) Settings[S_UNITSYSTEM]=!Settings[S_UNITSYSTEM];
 	  if(ROW==2) {
@@ -494,11 +556,14 @@ void serialMenuCommon()
 	  if(ROW==4) Settings[S_DEBUG]=!Settings[S_DEBUG];
 	  if(ROW==5) timer.magCalibrationTimer=CALIBRATION_DELAY;
 	}
+#endif
+#ifdef PAGE8
 	if(configPage == 8 && COL == 3) {
 	  if(ROW==1) Settings[S_GPSTIME]=!Settings[S_GPSTIME];
 	  if(ROW==2) Settings[S_GPSTZAHEAD]=!Settings[S_GPSTZAHEAD];
 	  if(ROW==3) if((menudir == 1 && Settings[S_GPSTZ] < 130) || (menudir == -1 && Settings[S_GPSTZ] > 0))Settings[S_GPSTZ]=Settings[S_GPSTZ]+menudir*5;
 	}
+#endif
   	if((ROW==10)&&(COL==1)) configExit();
 	if((ROW==10)&&(COL==2)) configSave();
 
