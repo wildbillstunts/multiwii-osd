@@ -36,7 +36,7 @@ enum Settings {
   S_WITHDECORATION,
   S_SHOWBATLEVELEVOLUTION,
   S_RESETSTATISTICS,
-  S_ENABLEADC,
+  S_MAPMODE,
   S_VREFERENCE,
   S_USE_BOXNAMES,
   S_MODEICON,
@@ -58,6 +58,8 @@ enum Settings {
   S_AMPMIN,
   S_AMPMAXL,
   S_AMPMAXH,
+  S_HUD,
+  S_HUDOSDSW,
   S_CS0,
   S_CS1,
   S_CS2,
@@ -68,8 +70,9 @@ enum Settings {
   S_CS7,
   S_CS8,
   S_CS9,
+
   // EEPROM_SETTINGS must be last!
-  EEPROM_SETTINGS
+  EEPROM_SETTINGS,
 };
 
 

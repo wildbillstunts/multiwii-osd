@@ -1,4 +1,21 @@
+#define POS_MASK        0x01FF
+#define PAL_MASK        0x0003
+#define PAL_SHFT             9
+#define DISPLAY_MASK    0xC000
+#define DISPLAY_ALWAYS  0xC000
+#define DISPLAY_NEVER   0x0000
+#define DISPLAY_COND    0x4000
+#define DISPLAY_MIN_OFF     0x8000
 
+//#define POS(pos, pal_off, disp)  (((pos)&POS_MASK))
+#define POS(pos, pal_off, disp)  (((pos)&POS_MASK)|((pal_off)<<PAL_SHFT)|(disp))
+#if defined SHIFTDOWN
+#define TOPSHIFT        LINE
+#else
+#define TOPSHIFT        0
+#endif
+
+//@@@@@@@@@@@@@@@
 
 #define MPH 1
 #define KMH 0
@@ -104,10 +121,15 @@ int8_t menudir;
 unsigned int allSec=0;
 uint8_t armedtimer=255;
 uint16_t debugerror;
-
+uint16_t debugval=0;
 uint16_t cell_data[6];
+uint16_t cycleTime;
+uint16_t I2CError;
+uint8_t oldROW=0;
 
 // Config status and cursor location
+uint8_t screenlayout=0;
+uint8_t oldscreenlayout=0;
 uint8_t ROW=10;
 uint8_t COL=3;
 int8_t configPage=1;
@@ -125,11 +147,14 @@ struct {
   uint8_t horizon;
   uint8_t baro;
   uint8_t mag;
+  uint16_t camstab;
   uint16_t gpshome;
   uint16_t gpshold;
-  uint16_t camstab;
+  uint16_t passthru;
   uint32_t osd_switch;
   uint32_t llights;
+  uint32_t gpsmission;
+  uint32_t gpsland;
 ;}mode;
 
 
@@ -192,6 +217,8 @@ enum Setting_ {
   S_AMPMIN,
   S_AMPMAXL,
   S_AMPMAXH,
+  S_HUD,
+  S_HUDOSDSW,
   S_CS0,
   S_CS1,
   S_CS2,
@@ -206,14 +233,17 @@ enum Setting_ {
   EEPROM_SETTINGS
 };
 
+
 uint16_t S16_AMPMAX = 999; // 16 bit eeprom setting of AMPMAX  
 
 uint8_t Settings[EEPROM_SETTINGS];
 
+//const uint8_t screenlayoutoffset=((EEPROM_SETTINGS-EEPROM16_SETTINGS_START)>>2);
+
 
 // For Settings Defaults
 uint8_t EEPROM_DEFAULT[EEPROM_SETTINGS] = {
-1,   // used for check              0
+MWOSDVER,   // used for check              0
 0,   // S_RSSIMIN                   1
 150, // S_RSSIMAX                   2
 60,  // S_RSSI_ALARM                3
@@ -271,6 +301,8 @@ uint8_t EEPROM_DEFAULT[EEPROM_SETTINGS] = {
 4,   // S_AMPMIN,
 150,  // S_AMPMAXL,
 0,   // S_AMPMAXH,
+0,   // S_HUD
+1,   // S_HUDOSDSW
 0,   // S_CS0,
 0,   // S_CS1,
 0,   // S_CS2,
@@ -281,7 +313,94 @@ uint8_t EEPROM_DEFAULT[EEPROM_SETTINGS] = {
 0,   // S_CS7,
 0,   // S_CS8,
 0,   // S_CS9,
+
 };
+
+uint16_t SCREENLAYOUT_DEFAULT[EEPROM_SETTINGS] = {
+
+LINE02+2 |DISPLAY_ALWAYS,  // GPS_numSatPosition
+LINE02+22 |DISPLAY_ALWAYS,   // GPS_directionToHomePosition
+LINE02+24 |DISPLAY_ALWAYS,   // GPS_distanceToHomePosition
+LINE07+3 |DISPLAY_ALWAYS,   // speedPosition
+LINE05+24 |DISPLAY_ALWAYS,   // GPS_angleToHomePosition
+LINE03+24 |DISPLAY_ALWAYS,   // MwGPSAltPosition
+LINE02+6 |DISPLAY_ALWAYS,   // sensorPosition
+LINE04+24 |DISPLAY_ALWAYS,   // MwHeadingPosition
+LINE02+10 |DISPLAY_ALWAYS,   // MwHeadingGraphPosition
+LINE07+23 |DISPLAY_ALWAYS,   // MwAltitudePosition
+LINE07+22 |DISPLAY_ALWAYS,   // MwClimbRatePosition
+LINE12+22 |DISPLAY_ALWAYS,   // CurrentThrottlePosition
+LINE13+22 |DISPLAY_ALWAYS,   // flyTimePosition
+LINE13+22 |DISPLAY_ALWAYS,   // onTimePosition
+LINE11+11 |DISPLAY_ALWAYS,   // motorArmedPosition
+LINE10+2 |DISPLAY_ALWAYS,   // MwGPSLatPosition
+LINE10+15 |DISPLAY_ALWAYS,   // MwGPSLonPosition
+LINE01+2 |DISPLAY_ALWAYS,   // MwGPSLatPositionTop      // On top of screen
+LINE01+15 |DISPLAY_ALWAYS,   // MwGPSLonPositionTop      // On top of screen
+LINE12+3 |DISPLAY_ALWAYS,   // rssiPosition
+LINE09+3 |DISPLAY_ALWAYS,   // temperaturePosition
+LINE13+3 |DISPLAY_ALWAYS,  // voltagePosition
+LINE11+3 |DISPLAY_ALWAYS,   // vidvoltagePosition
+LINE13+9 |DISPLAY_ALWAYS,   // amperagePosition
+LINE13+16 |DISPLAY_ALWAYS,   // pMeterSumPosition
+LINE07+7 |DISPLAY_ALWAYS,   // horizonPosition
+LINE07+7 |DISPLAY_ALWAYS,   // SideBarPosition
+LINE07+7 |DISPLAY_ALWAYS,   // SideBarScrollPosition
+LINE10+10 |DISPLAY_ALWAYS,   // CallSign Position
+LINE08+10 |DISPLAY_ALWAYS,   // Debug Position
+LINE05+2 |DISPLAY_ALWAYS,   // Gimbal Position
+LINE12+11 |DISPLAY_ALWAYS,  // GPS_time Position
+LINE09+22 |DISPLAY_ALWAYS,   // SportPosition
+LINE04+2 |DISPLAY_ALWAYS,   // modePosition
+LINE02+22 |DISPLAY_NEVER,   // MapModePosition
+LINE07+15 |DISPLAY_NEVER,   // MapCenterPosition
+LINE04+10 |DISPLAY_ALWAYS,   // APstatusPosition
+
+};
+
+
+uint16_t SCREENLAYOUT_DEFAULT_OSDSW[EEPROM_SETTINGS] = {
+
+LINE02+2 |DISPLAY_NEVER,  // GPS_numSatPosition
+LINE13+19 |DISPLAY_ALWAYS,   // GPS_directionToHomePosition
+LINE02+12  |DISPLAY_NEVER,   // GPS_distanceToHomePosition
+LINE02+3  |DISPLAY_NEVER,   // speedPosition
+LINE05+24 |DISPLAY_NEVER,   // GPS_angleToHomePosition
+LINE03+24 |DISPLAY_NEVER,   // MwGPSAltPosition
+LINE02+6 |DISPLAY_NEVER,   // sensorPosition
+LINE04+24 |DISPLAY_NEVER,   // MwHeadingPosition
+LINE02+9 |DISPLAY_NEVER,   // MwHeadingGraphPosition
+LINE02+23 |DISPLAY_NEVER,   // MwAltitudePosition
+LINE07+23 |DISPLAY_NEVER,   // MwClimbRatePosition
+LINE12+22 |DISPLAY_NEVER,   // CurrentThrottlePosition
+LINE13+22 |DISPLAY_ALWAYS,   // flyTimePosition
+LINE13+22 |DISPLAY_ALWAYS,   // onTimePosition
+LINE11+11 |DISPLAY_ALWAYS,   // motorArmedPosition
+LINE10+2 |DISPLAY_NEVER,   // MwGPSLatPosition
+LINE10+15 |DISPLAY_NEVER,   // MwGPSLonPosition
+LINE01+2 |DISPLAY_NEVER,   // MwGPSLatPositionTop      // On top of screen
+LINE01+15 |DISPLAY_NEVER,   // MwGPSLonPositionTop      // On top of screen
+LINE12+2 |DISPLAY_NEVER,   // rssiPosition
+LINE09+2 |DISPLAY_NEVER,   // temperaturePosition
+LINE13+3 |DISPLAY_ALWAYS,  // voltagePosition
+LINE11+3 |DISPLAY_ALWAYS,   // vidvoltagePosition
+LINE13+13 |DISPLAY_NEVER,   // amperagePosition
+LINE13+23 |DISPLAY_NEVER,   // pMeterSumPosition
+LINE05+7 |DISPLAY_NEVER,   // horizonPosition
+LINE07+7 |DISPLAY_NEVER,   // SideBarPosition
+LINE07+7 |DISPLAY_NEVER,   // SideBarScrollPosition
+LINE10+10 |DISPLAY_NEVER,   // CallSign Position
+LINE08+10 |DISPLAY_NEVER,   // Debug Position
+LINE05+2 |DISPLAY_NEVER,   // Gimbal Position
+LINE12+11 |DISPLAY_NEVER,  // GPS_time Position
+LINE09+22 |DISPLAY_NEVER,   // SportPosition
+LINE04+2 |DISPLAY_NEVER,   // modePosition
+LINE02+22 |DISPLAY_NEVER,   // MapModePosition
+LINE07+17 |DISPLAY_NEVER,   // MapCenterPosition
+LINE04+10 |DISPLAY_NEVER,   // APstatusPosition
+
+};
+
 
 static uint8_t P8[PIDITEMS], I8[PIDITEMS], D8[PIDITEMS];
 
@@ -324,8 +443,9 @@ uint16_t GPS_speed;
 uint16_t old_GPS_speed;
 int16_t GPS_directionToHome=0;
 uint8_t GPS_numSat=0;
-uint16_t I2CError=0;
-uint16_t cycleTime=0;
+uint8_t GPS_waypoint_step=0;
+//uint16_t I2CError=0;
+//uint16_t cycleTime=0;
 uint16_t pMeterSum=0;
 uint16_t MwRssi=0;
 uint32_t GPS_time = 0;        //local time of coord calc - haydent
@@ -361,8 +481,8 @@ float amperagesum = 0;
 uint16_t MWAmperage=0;
 
 // Rssi
-uint16_t rssi =0;   // uint8_t ?
-uint16_t oldrssi;   // uint8_t ?
+int16_t rssi =0;   // uint8_t ?
+int16_t oldrssi;   // uint8_t ?
 //int rssiADC=0;
 //int rssi_Int=0;
 
@@ -379,7 +499,7 @@ int16_t temperature=0;                  // temperature in degrees Centigrade
 uint16_t speedMAX=0;
 int16_t altitudeMAX=0;
 int16_t distanceMAX=0;
-float trip=0;
+int trip=0;//needs determining what int to be
 uint16_t flyingTime=0; 
 
 
@@ -406,9 +526,10 @@ uint16_t flyingTime=0;
 #define MSP_MOTOR_PINS           115   //out message         which pins are in use for motors & servos, for GUI 
 #define MSP_BOXNAMES             116   //out message         the aux switch names
 #define MSP_PIDNAMES             117   //out message         the PID names
-#define MSP_WP                   118   //out message         get a WP, WP# is in the payload, returns (WP#, lat, lon, alt, flags) WP#0-home, WP#16-poshold
 #define MSP_BOXIDS               119   //out message         get the permanent IDs associated to BOXes
-#define MSP_CELLS                121   //out message         FrSky SPort Telemtry
+#define MSP_NAV_STATUS           121   //out message	     Returns navigation status
+
+#define MSP_CELLS                130   //out message         FrSky SPort Telemtry
 
 #define MSP_SET_RAW_RC           200   //in message          8 rc chan
 #define MSP_SET_RAW_GPS          201   //in message          fix, numsat, lat, lon, alt, speed
@@ -442,23 +563,32 @@ uint16_t flyingTime=0;
 #define OSD_SERIAL_SPEED         4
 #define OSD_RESET                5
 #define OSD_DEFAULT              6
+#define OSD_SENSORS              7
 // End private MSP for use with the GUI
 
 const char disarmed_text[] PROGMEM = "DISARMED";
 const char armed_text[] PROGMEM = " ARMED";
+const char APRTHtext[] PROGMEM = "AUTO RTH";
+const char APHOLDtext[] PROGMEM = "AUTO HOLD";
+const char APWAYPOINTtext[] PROGMEM = " MISSION";
+//const char APLANDtext[] PROGMEM = "LANDING";
 
 
 // For Intro
-const char message0[] PROGMEM = "MULTIWII MWOSD - R1.1";
+#ifdef INTRO_VERSION
+const char message0[] PROGMEM = INTRO_VERSION;
+#else
+const char message0[] PROGMEM = "MULTIWII MWOSD - R1.2";
+#endif
 //const char message1[] PROGMEM = "VIDEO SIGNAL NTSC";
 //const char message2[] PROGMEM = "VIDEO SIGNAL PAL ";
 const char message5[] PROGMEM = "MW VERSION:";
-//const char message6[] PROGMEM = "MENU:THRT MIDDLE";
-//const char message7[] PROGMEM = "YAW RIGHT";
-//const char message8[] PROGMEM = "PITCH FULL";
+const char message6[] PROGMEM = "OPEN MENU: THRT MIDDLE";
+const char message7[] PROGMEM = "+YAW RIGHT";
+const char message8[] PROGMEM = "+PITCH FULL";
 const char message9[] PROGMEM = "ID:";         // Call Sign on the beggining of the transmission   
-//const char message10[] PROGMEM = "TZ UTC:"; //haydent - Time Zone & DST Setting
-//const char message11[] PROGMEM = "DST:"; //haydent - Time Zone & DST Setting
+const char message10[] PROGMEM = "TZ UTC:"; //haydent - Time Zone & DST Setting
+const char message11[] PROGMEM = "MORE IN: GUI+CONFIG.H"; 
 
 // For Config menu common
 const char configMsgON[] PROGMEM = "ON";
@@ -555,12 +685,14 @@ const unsigned char speedUnitAdd[2] ={
 const unsigned char temperatureUnitAdd[2] = {
   0x0e,0x0d};
 
+/*
 const char MultiWiiLogoL1Add[17] PROGMEM = {
   0xd0,0xd1,0xd2,0xd3,0xd4,0xd5,0xd6,0xd7,0xd8,0xd9,0xda,0xdb,0xdc,0xdd,0xd5,0};
 const char MultiWiiLogoL2Add[17] PROGMEM = {
   0xe0,0xe1,0xe2,0xe3,0xe4,0xe5,0xe6,0xe7,0xe8,0xe9,0xea,0xeb,0xec,0xed,0xee,0};
 const char MultiWiiLogoL3Add[17] PROGMEM = {
   0xf0,0xf1,0xf2,0xf3,0xd5,0xd5,0xd5,0xd5,0xd5,0xd5,0xd5,0xd5,0xd5,0xd5,0xd5,0};
+*/
 
 const unsigned char MwAltitudeAdd[2]={
   0xa7,0xa8};
@@ -570,15 +702,12 @@ const unsigned char GPS_distanceToHomeAdd[2]={
   0xbb,0xb9};
 const unsigned char MwGPSAltPositionAdd[2]={
   0xa7,0xa8};
-const char MWOSDVersionPosition = 65;
+const char MWOSDVersionPosition = 34;
 
 
-// All screen locations defines in ScreenLayout.ino
 enum Positions {
   GPS_numSatPosition,
-  GPS_numSatPositionTop,
   GPS_directionToHomePosition,
-  GPS_directionToHomePositionBottom,
   GPS_distanceToHomePosition,
   speedPosition,
   GPS_angleToHomePosition,
@@ -603,11 +732,21 @@ enum Positions {
   amperagePosition,
   pMeterSumPosition,
   horizonPosition,
+  SideBarPosition,
+  SideBarScrollPosition,
   callSignPosition,
   debugPosition,
   gimbalPosition,
-  GPS_timePosition
+  GPS_timePosition,
+  SportPosition,
+  ModePosition,
+  MapModePosition,
+  MapCenterPosition,
+  APstatusPosition,
+  POSITIONS_SETTINGS
 };
+
+uint16_t screenPosition[POSITIONS_SETTINGS];
 
 #define REQ_MSP_IDENT     (1 <<  0)
 #define REQ_MSP_STATUS    (1 <<  1)
@@ -624,3 +763,4 @@ enum Positions {
 #define REQ_MSP_FONT      (1 << 12)
 #define REQ_MSP_DEBUG     (1 << 13)
 #define REQ_MSP_CELLS     (1 << 14)
+#define REQ_MSP_NAV_STATUS  32768 //(1 << 15)

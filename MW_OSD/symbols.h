@@ -5,8 +5,7 @@
  *
  */
 
-#define SYM_BLANK 0X20
-#define SYM_BLANK 0XCF
+#define SYM_BLANK 0X3F
 
 // Satellite Graphics
 #define SYM_SAT_L 0X1E
@@ -82,6 +81,10 @@
 #define SYM_GHOME1 0X9E
 #define SYM_GHOLD 0XCD
 #define SYM_GHOLD1 0XCE
+#define SYM_GMISSION 0XB5
+#define SYM_GMISSION1 0XB6
+#define SYM_GLAND 0XB7
+#define SYM_GLAND1 0XB8
 
 // Gimbal active Mode 
 #define SYM_GIMBAL 0X16 
@@ -93,6 +96,9 @@
 #define SYM_MAG 0XA1
 #define SYM_BAR 0XA2
 #define SYM_GPS 0XA3
+#define SYM_MAN 0XC0
+#define SYM_MAN1 0XC1
+#define SYM_MAN2 0XC2
 #define SYM_CHECK 0XBE
 #define SYM_BARO10 0XB7
 #define SYM_BARO11 0XB8
@@ -132,6 +138,9 @@
 #define SYM_BATT_2 0X94
 #define SYM_BATT_1 0X95
 #define SYM_BATT_EMPTY 0X96
+
+// Vario
+#define SYM_VARIO 0x7F
 
 // Batt Icon´s
 #define SYM_MAIN_BATT 0X97

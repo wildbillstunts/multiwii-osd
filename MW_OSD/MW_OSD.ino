@@ -1,5 +1,7 @@
+
+
 /*
-MultiWii NG OSD ...
+MultiWii NG OSD ... 
 
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -18,7 +20,8 @@ This work is based on the following open source work :-
  
  Please refer to credits.txt for list of individual contributions
 */
-            
+  
+#define MWOSDVER 4            
 #include <avr/pgmspace.h>
 #include <EEPROM.h> //Needed to access eeprom read/write functions
 #include "Config.h"
@@ -28,7 +31,7 @@ This work is based on the following open source work :-
 
 // Screen is the Screen buffer between program an MAX7456 that will be writen to the screen at 10hz
 char screen[480];
-// ScreenBuffer is an intermietary buffer to created Strings to send to Screen buffer
+// ScreenBuffer is an intermediate buffer to created Strings to send to Screen buffer
 char screenBuffer[20];
 
 uint32_t modeMSPRequests;
@@ -46,10 +49,10 @@ unsigned long previous_millis_high =0;
 void setup()
 {
 
-  Serial.begin(115200);
+  Serial.begin(BAUDRATE);
 //---- override UBRR with MWC settings
-  uint8_t h = ((F_CPU  / 4 / (115200) -1) / 2) >> 8;
-  uint8_t l = ((F_CPU  / 4 / (115200) -1) / 2);
+  uint8_t h = ((F_CPU  / 4 / (BAUDRATE) -1) / 2) >> 8;
+  uint8_t l = ((F_CPU  / 4 / (BAUDRATE) -1) / 2);
   UCSR0A  |= (1<<U2X0); UBRR0H = h; UBRR0L = l; 
 //---
   Serial.flush();
@@ -60,13 +63,15 @@ void setup()
   
   //Led output
   pinMode(LEDPIN,OUTPUT);
- 
+
+//  EEPROM.write(0,0); //;test
   checkEEPROM();
   readEEPROM();
   
-#ifdef STARTUPDELAY
-  delay(1000);
+#ifndef STARTUPDELAY
+  #define STARTUPDELAY 1000
 #endif
+  delay(STARTUPDELAY);
 
   MAX7456Setup();
  
@@ -77,7 +82,7 @@ void setup()
 
   setMspRequests();
   blankserialRequest(MSP_IDENT);
-  }
+}
 
 
 void (* resetFunc)(void)=0;
@@ -108,21 +113,18 @@ void setMspRequests() {
       REQ_MSP_ATTITUDE|
       REQ_MSP_ALTITUDE;
 
-#ifdef DEBUG
-      modeMSPRequests |= REQ_MSP_DEBUG;
-#endif
-
-    if(MwVersion == 0)
-      modeMSPRequests |= REQ_MSP_IDENT;
-
     if(!armed || Settings[S_THROTTLEPOSITION] || fieldIsVisible(pMeterSumPosition) || fieldIsVisible(amperagePosition) )
       modeMSPRequests |= REQ_MSP_RC;
-
-    if(mode.armed == 0) {
-        modeMSPRequests |= REQ_MSP_BOX;
-
-    }
-    modeMSPRequests |= REQ_MSP_CELLS;
+    if(mode.armed == 0)
+      modeMSPRequests |= REQ_MSP_BOX;
+    if(MwSensorActive&mode.gpsmission)
+      modeMSPRequests |= REQ_MSP_NAV_STATUS;
+#ifdef DEBUGMW
+      modeMSPRequests |= REQ_MSP_DEBUG;
+#endif
+#ifdef SPORT      
+      modeMSPRequests |= REQ_MSP_CELLS;
+#endif
   }
  
   if(Settings[S_MAINVOLTAGE_VBAT] ||
@@ -138,8 +140,16 @@ void setMspRequests() {
 
 void loop()
 {
- 
 
+  if (MwSensorActive&mode.osd_switch)
+    screenlayout=1;
+  else  
+    screenlayout=0;
+  if (!screenlayout==oldscreenlayout){
+    oldscreenlayout=screenlayout;
+    readEEPROM_screenlayout();
+  }
+    
   // Blink Basic Sanity Test Led at 1hz
   if(timer.tenthSec>10)
     digitalWrite(LEDPIN,HIGH);
@@ -165,7 +175,8 @@ void loop()
     timer.halfSec++;
     timer.Blink10hz=!timer.Blink10hz;
     calculateTrip();
-    
+ 
+   
       uint8_t MSPcmdsend;
       if(queuedMSPRequests == 0)
         queuedMSPRequests = modeMSPRequests;
@@ -173,7 +184,7 @@ void loop()
       queuedMSPRequests &= ~req;
       switch(req) {
       case REQ_MSP_IDENT:
-        MSPcmdsend = MSP_IDENT;
+       MSPcmdsend = MSP_IDENT;
         break;
       case REQ_MSP_STATUS:
         MSPcmdsend = MSP_STATUS;
@@ -212,23 +223,36 @@ void loop()
         MSPcmdsend = MSP_BOXIDS;
 #endif
          break;
-       case REQ_MSP_FONT:
+      case REQ_MSP_FONT:
          MSPcmdsend = MSP_OSD;
          break;
-       case REQ_MSP_DEBUG:
+#if defined DEBUGMW
+      case REQ_MSP_DEBUG:
          MSPcmdsend = MSP_DEBUG;
          break;
-       case REQ_MSP_CELLS:
+#endif
+#if defined SPORT
+      case REQ_MSP_CELLS:
          MSPcmdsend = MSP_CELLS;
          break;
+#endif
+      case REQ_MSP_NAV_STATUS:
+//           if(MwSensorActive&mode.gpsmission)
+         MSPcmdsend = MSP_NAV_STATUS;
+      break;
     }
-      if(!fontMode)
+    if(!fontMode){
       blankserialRequest(MSPcmdsend);      
+    }
 
-  ProcessSensors();       // using analogue sensors
+    ProcessSensors();       // using analogue sensors
 
     MAX7456_DrawScreen();
-    if( allSec < 7 ){
+
+#ifndef INTRO_DELAY 
+#define INTRO_DELAY 10
+#endif
+    if( allSec < INTRO_DELAY ){
       displayIntro();
     }  
     else
@@ -250,10 +274,11 @@ void loop()
       }
       else
       {
-       // CollectStatistics();      DO NOT DELETE
 
-        if(Settings[S_DISPLAYVOLTAGE]&&((voltage>Settings[S_VOLTAGEMIN])||(timer.Blink2hz))) displayVoltage();
-        if(Settings[S_DISPLAYRSSI]&&((rssi>Settings[S_RSSI_ALARM])||(timer.Blink2hz))) displayRSSI();
+        if(Settings[S_DISPLAYVOLTAGE]&&((voltage>Settings[S_VOLTAGEMIN])||(timer.Blink2hz))) 
+          displayVoltage();
+        if(Settings[S_DISPLAYRSSI]&&((rssi>Settings[S_RSSI_ALARM])||(timer.Blink2hz))) 
+          displayRSSI();
 
         displayTime();
 #ifdef TEMPSENSOR
@@ -268,16 +293,16 @@ void loop()
 
 #ifdef CALLSIGNALWAYS
         if(Settings[S_DISPLAY_CS]) displayCallsign(CALLSIGNALWAYS); 
-#elif  CALLSIGNLLIGHTS
-        if (MwSensorActive&mode.llights) displayCallsign(CALLSIGNLLIGHTS); 
-#elif  CALLSIGNGIMBAL
-        if (MwSensorActive&mode.camstab) displayCallsign(CALLSIGNGIMBAL); 
+#elif  FREETEXTLLIGHTS
+        if (MwSensorActive&mode.llights) displayCallsign(FREETEXTLLIGHTS); 
+#elif  FREETEXTGIMBAL
+        if (MwSensorActive&mode.camstab) displayCallsign(FREETEXTGIMBAL); 
 #else 
         if ( (onTime > (timer.lastCallSign+300)) || (onTime < (timer.lastCallSign+4)))
        {
            // Displays 4 sec every 5min (no blink during flight)
         if ( onTime > (timer.lastCallSign+300)) timer.lastCallSign = onTime; 
-        if(Settings[S_DISPLAY_CS]) displayCallsign(getPosition(callSignPosition));       
+        if(Settings[S_DISPLAY_CS]) displayCallsign(getPosition(callSignPosition));      
        }
 #endif
 
@@ -302,9 +327,13 @@ void loop()
           displayDistanceToHome();
           displayAngleToHome();
           displayGPS_speed();
-          displayGPSPosition();
+          displayGPSPosition();        
+#ifdef GPSTIME
           displayGPS_time();
-          if(Settings[S_MAPMODE]) mapmode();
+#endif
+#ifdef MAPMODE
+          mapmode();
+#endif
 #ifdef FIXEDWING // required because FW can fly without BARO / MAG
           displayAltitude();
           displayClimbRate();
@@ -314,8 +343,12 @@ void loop()
         }
         displayMode();       
         displayDebug();
+#ifdef I2CERROR
+        displayI2CError();
+#endif        
 #ifdef SPORT        
-        if(MwSensorPresent)displayCells();
+        if(MwSensorPresent)
+          displayCells();
 #endif
       }
     }
@@ -331,11 +364,12 @@ void loop()
     timer.tenthSec=0;
     onTime++;
 
-  amperagesum += amperage;
+    if (Settings[S_AMPER_HOUR]) 
+      amperagesum += amperage;
 
     if(!armed) {
 #ifndef MAPMODENORTH
-        armedangle=MwHeading;
+      armedangle=MwHeading;
 #endif
     }
     else {
@@ -356,7 +390,6 @@ void loop()
       timer.magCalibrationTimer=0;
     }
 
-//    if(accCalibrationTimer>0) accCalibrationTimer--;
     if(timer.magCalibrationTimer>0) timer.magCalibrationTimer--;
 
     if(timer.rssiTimer>0) timer.rssiTimer--;
@@ -371,22 +404,25 @@ void loop()
 
 void calculateTrip(void)
 {
+  static float tripSum = 0; 
   if(GPS_fix && armed && (GPS_speed>0)) {
     if(Settings[S_UNITSYSTEM])
-      trip += GPS_speed *0.0016404;     //  50/(100*1000)*3.2808=0.0016404     cm/sec ---> ft/50msec
+      tripSum += GPS_speed *0.0016404;     //  50/(100*1000)*3.2808=0.0016404     cm/sec ---> ft/50msec
     else
-      trip += GPS_speed *0.0005;        //  50/(100*1000)=0.0005               cm/sec ---> mt/50msec (trip var is float)      
+      tripSum += GPS_speed *0.0005;        //  50/(100*1000)=0.0005               cm/sec ---> mt/50msec (trip var is float)      
   }
+  trip = (int) tripSum;
 }
 
 
-void writeEEPROM(void)
+void writeEEPROM(void) // OSD will only change 8 bit values. GUI changes directly
 {
   Settings[S_AMPMAXH] = S16_AMPMAX>>8;
   Settings[S_AMPMAXL] = S16_AMPMAX&0xFF;
   for(uint8_t en=0;en<EEPROM_SETTINGS;en++){
     EEPROM.write(en,Settings[en]);
   } 
+  EEPROM.write(0,MWOSDVER);
 }
 
 
@@ -396,18 +432,48 @@ void readEEPROM(void)
      Settings[en] = EEPROM.read(en);
   }
   S16_AMPMAX=(Settings[S_AMPMAXH]<<8)+Settings[S_AMPMAXL];
+  readEEPROM_screenlayout();
+}
+
+
+void readEEPROM_screenlayout(void)
+{
+  uint16_t EEPROMscreenoffset=EEPROM_SETTINGS+(screenlayout*POSITIONS_SETTINGS*2);
+  for(uint8_t en=0;en<POSITIONS_SETTINGS;en++){
+    uint16_t pos=(en*2)+EEPROMscreenoffset;
+    screenPosition[en] = EEPROM.read(pos);
+    uint16_t xx=EEPROM.read(pos+1)<<8;
+    screenPosition[en] = screenPosition[en] + xx;
+    if(Settings[S_VIDEOSIGNALTYPE]){
+      if ((screenPosition[en]&0x1FF)>LINE06) screenPosition[en] = screenPosition[en] + LINE;
+      if ((screenPosition[en]&0x1FF)>LINE09) screenPosition[en] = screenPosition[en] + LINE;
+    }
+#ifdef SHIFTDOWN
+      if ((screenPosition[en]&0x1FF)<LINE04) screenPosition[en] = screenPosition[en] + LINE;
+#endif
+
+  }
 }
 
 
 void checkEEPROM(void)
 {
   uint8_t EEPROM_Loaded = EEPROM.read(0);
-  if (!EEPROM_Loaded){
+  if (EEPROM_Loaded!=MWOSDVER){
     for(uint8_t en=0;en<EEPROM_SETTINGS;en++){
       EEPROM.write(en,EEPROM_DEFAULT[en]);
     }
+
+    for(uint8_t en=0;en<POSITIONS_SETTINGS;en++){
+      EEPROM.write(EEPROM_SETTINGS+(en*2),SCREENLAYOUT_DEFAULT[en]&0xFF);
+      EEPROM.write(EEPROM_SETTINGS+1+(en*2),SCREENLAYOUT_DEFAULT[en]>>8);
+      EEPROM.write(EEPROM_SETTINGS+(POSITIONS_SETTINGS*2)+(en*2),SCREENLAYOUT_DEFAULT_OSDSW[en]&0xFF);
+      EEPROM.write(EEPROM_SETTINGS+(POSITIONS_SETTINGS*2)+1+(en*2),SCREENLAYOUT_DEFAULT_OSDSW[en]>>8);
+    }
   }
 }
+
+
 
 
 uint8_t safeMode() {
@@ -514,12 +580,16 @@ void ProcessSensors(void) {
 //-------------- ADC and PWM RSSI sensor read into filter array
   static uint8_t sensorindex;
   for (uint8_t sensor=0;sensor<SENSORTOTAL;sensor++) {
-    int16_t sensortemp;
+    uint16_t sensortemp;
 //    uint8_t sensorpin = sensorpinarray[sensor];
     sensortemp = analogRead(sensorpinarray[sensor]);
     if (sensor ==4) { 
       if (Settings[S_PWMRSSI]){
+#if defined FASTPWMRSSI
+        sensortemp = FastpulseIn(PWMRSSIPIN, HIGH,250);
+#else
         sensortemp = pulseIn(PWMRSSIPIN, HIGH,21000)>>1;
+#endif
       }
     }
 #if defined STAGE2FILTER // Use averaged change    
@@ -583,20 +653,20 @@ void ProcessSensors(void) {
   if (!Settings[S_MAINVOLTAGE_VBAT]){ // not MWII
     uint16_t voltageRaw = sensorfilter[0][SENSORFILTERSIZE];
     if (!Settings[S_VREFERENCE]){
-      voltage = float(voltageRaw) * Settings[S_DIVIDERRATIO] * (0.0001);  
+      voltage = float(voltageRaw) * Settings[S_DIVIDERRATIO] * (DIVIDER1v1);  
     }
     else {
-      voltage = float(voltageRaw) * Settings[S_DIVIDERRATIO] * (0.0005);     
+      voltage = float(voltageRaw) * Settings[S_DIVIDERRATIO] * (DIVIDER5v);     
     }
   }
 
   if (!Settings[S_VIDVOLTAGE_VBAT]) {
     uint16_t vidvoltageRaw = sensorfilter[1][SENSORFILTERSIZE];
     if (!Settings[S_VREFERENCE]){
-      vidvoltage = float(vidvoltageRaw) * Settings[S_VIDDIVIDERRATIO] * (0.0001);
+      vidvoltage = float(vidvoltageRaw) * Settings[S_VIDDIVIDERRATIO] * (DIVIDER1v1);
     }
     else {
-      vidvoltage = float(vidvoltageRaw) * Settings[S_VIDDIVIDERRATIO] * (0.0005);
+      vidvoltage = float(vidvoltageRaw) * Settings[S_VIDDIVIDERRATIO] * (DIVIDER5v);
     }
   }
 
@@ -622,7 +692,8 @@ void ProcessSensors(void) {
       else 
         amperage = Settings[S_AMPMIN];
     }  
-  }else{
+  }
+  else{
       amperage = MWAmperage / 100;
   }
 
@@ -648,21 +719,34 @@ void ProcessSensors(void) {
     else if (rssi > 100) rssi=100;
   }
 
-/*
-Serial.print(sensorindex);
-  Serial.print(" ");
-  Serial.print(sensorfilter[2][SENSORFILTERSIZE]);  
-  for (uint8_t x=0;x<5;x++) {
-    Serial.print(" ");
-    Serial.print(sensorfilter[x][sensorindex]);  
-  }    
-  Serial.println(" ");
-*/
-
 //-------------- For filter support
   sensorindex++;                    
   if (sensorindex >= SENSORFILTERSIZE)              
     sensorindex = 0;                           
 }
 
+unsigned long FastpulseIn(uint8_t pin, uint8_t state, unsigned long timeout)
+{
+  uint8_t bit = digitalPinToBitMask(pin);
+  uint8_t port = digitalPinToPort(pin);
+  uint8_t stateMask = (state ? bit : 0);
+  unsigned long width = 0;
+  unsigned long numloops = 0;
+  unsigned long maxloops = timeout;
+	
+  while ((*portInputRegister(port) & bit) == stateMask)
+    if (numloops++ == maxloops)
+      return 0;
+	
+  while ((*portInputRegister(port) & bit) != stateMask)
+    if (numloops++ == maxloops)
+      return 0;
+	
+  while ((*portInputRegister(port) & bit) == stateMask) {
+    if (numloops++ == maxloops)
+      return 0;
+    width++;
+  }
+  return width; 
+}
 
