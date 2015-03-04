@@ -1,5 +1,5 @@
 
-#define SERIALBUFFERSIZE 300
+#define SERIALBUFFERSIZE 250
 static uint8_t serialBuffer[SERIALBUFFERSIZE]; // this hold the imcoming string from serial O string
 static uint8_t receiverIndex;
 static uint8_t dataSize;
@@ -47,8 +47,7 @@ void serialMSPCheck()
         Serial.write(Settings[i]);
 	txCheckSum ^= Settings[i];
       }
-      Serial.write(txCheckSum);
-      
+      Serial.write(txCheckSum);    
     }
 
 /*
@@ -91,7 +90,7 @@ void serialMSPCheck()
       EEPROM.write(0,MWOSDVER);
       readEEPROM();
       setMspRequests();
-    }
+     }
 
 
     if(cmd == OSD_GET_FONT) {
@@ -124,6 +123,7 @@ void serialMSPCheck()
                     
   }
 
+#ifndef GPSOSD
   if (cmdMSP==MSP_IDENT)
   {
     MwVersion= read8();                             // MultiWii Firmware version
@@ -381,6 +381,7 @@ void serialMSPCheck()
     modeMSPRequests &=~ REQ_MSP_BOX;
   }
 #endif
+#endif // GPSOSD
 }
 // End of decoded received commands from MultiWii
 // --------------------------------------------------------------------------------------
@@ -404,21 +405,27 @@ void handleRawRC() {
 
   if(!waitStick)
   {
-    if((MwRcData[PITCHSTICK]>MAXSTICK)&&(MwRcData[YAWSTICK]>MAXSTICK)&&(MwRcData[THROTTLESTICK]>MINSTICK)&&!configMode&&(allSec>5)&&!armed)
-    {
-      // Enter config mode using stick comvination
-      waitStick =  2;	// Sticks must return to center before continue!
-      configMode = 1;
-      setMspRequests();
+    if((MwRcData[PITCHSTICK]>MAXSTICK)&&(MwRcData[YAWSTICK]>MAXSTICK)&&(MwRcData[THROTTLESTICK]>MINSTICK)){
+      if ((allSec-menuSec)>5) {
+        armed=0;
+      }
+      else if (!configMode&&(allSec>5)&&!armed){
+          // Enter config mode using stick combination
+          waitStick =  2;	// Sticks must return to center before continue!
+          configMode = 1;
+          setMspRequests();
+      }
     }
     else if(configMode) {
+      int8_t oldmenudir=constrain(menudir,-5,5);
+      menudir=0;
       if(previousarmedstatus&&(MwRcData[THROTTLESTICK]>MINSTICK))
       {
 	// EXIT from SHOW STATISTICS AFTER DISARM (push throttle up)
 	waitStick = 2;
 	configExit();
       }
-if(configMode&&(MwRcData[ROLLSTICK]>MAXSTICK)) // MOVE RIGHT
+      if(configMode&&(MwRcData[ROLLSTICK]>MAXSTICK)) // MOVE RIGHT
       {
 	waitStick = 1;
 	COL++;
@@ -436,6 +443,9 @@ if(configMode&&(MwRcData[ROLLSTICK]>MAXSTICK)) // MOVE RIGHT
 	ROW--;
 	if(ROW<1)
 	  ROW=1;
+        if(configPage == 0) {
+          ROW=10;
+        }
       }
       else if(configMode&&(MwRcData[PITCHSTICK]<MINSTICK)) // MOVE DOWN
       {
@@ -447,18 +457,21 @@ if(configMode&&(MwRcData[ROLLSTICK]>MAXSTICK)) // MOVE RIGHT
       else if(!previousarmedstatus&&configMode&&(MwRcData[YAWSTICK]<MINSTICK)) // DECREASE
       {
 	waitStick = 1;
-        menudir=-1;
+        menudir=-1+oldmenudir;
         serialMenuCommon();  
       }
       else if(!previousarmedstatus&&configMode&&(MwRcData[YAWSTICK]>MAXSTICK)) // INCREASE
       { 
 	waitStick =1;
-        menudir=1;
+        menudir=1+oldmenudir;
 	if(configPage == 9 && COL == 3) {
 	  if(ROW==5) timer.magCalibrationTimer=0;
         }
         serialMenuCommon();  
       }      
+    }
+    else{
+      menuSec=allSec;
     }
     if(waitStick == 1)
       stickTime = millis();
@@ -467,28 +480,19 @@ if(configMode&&(MwRcData[ROLLSTICK]>MAXSTICK)) // MOVE RIGHT
 
 void serialMenuCommon()
   {
-    if((ROW==10)&&(COL==3)) configPage=configPage+menudir;
+    if((ROW==10)&&(COL==3)) {
+      constrain(menudir,-1,1);
+      configPage=configPage+menudir;
+    }
     if(configPage<MINPAGE) configPage = MAXPAGE;
     if(configPage>MAXPAGE) configPage = MINPAGE;
-
-#ifdef PAGE0
-//comment
-#endif
 #ifdef PAGE1
 	if(configPage == 1) {
-	  if(ROW >= 1 && ROW <= 5) {
+	  if(ROW >= 1 && ROW <= 7) {
 	    if(COL==1) P8[ROW-1]=P8[ROW-1]+menudir;
 	    if(COL==2) I8[ROW-1]=I8[ROW-1]+menudir;
 	    if(COL==3) D8[ROW-1]=D8[ROW-1]+menudir;
 	  }
-
-	  if(ROW == 6) {
-	    if(COL==1) P8[7]=P8[7]+menudir;
-	    if(COL==2) I8[7]=I8[7]+menudir;
-	    if(COL==3) D8[7]=D8[7]+menudir;
-	  }
-
-	  if((ROW==7)&&(COL==1)) P8[8]=P8[8]+menudir;
 	}
 #endif
 #ifdef PAGE2
@@ -506,15 +510,12 @@ void serialMenuCommon()
 	  if(ROW==2) Settings[S_DIVIDERRATIO]=Settings[S_DIVIDERRATIO]+menudir;
 	  if(ROW==3) Settings[S_VOLTAGEMIN]=Settings[S_VOLTAGEMIN]+menudir;
 	  if(ROW==4) Settings[S_VIDVOLTAGE]=!Settings[S_VIDVOLTAGE];
-	  if(ROW==5) Settings[S_BATCELLS]=Settings[S_BATCELLS]+menudir;
-	  if(ROW==6) Settings[S_MAINVOLTAGE_VBAT]=!Settings[S_MAINVOLTAGE_VBAT];
-	  if(ROW==7) Settings[S_VIDDIVIDERRATIO]=Settings[S_VIDDIVIDERRATIO]+menudir;
+	  if(ROW==5) Settings[S_VIDDIVIDERRATIO]=Settings[S_VIDDIVIDERRATIO]+menudir;
+	  if(ROW==6) Settings[S_BATCELLS]=Settings[S_BATCELLS]+menudir;
+	  if(ROW==7) Settings[S_MAINVOLTAGE_VBAT]=!Settings[S_MAINVOLTAGE_VBAT];
 	}
 #endif
 #ifdef PAGE4
-
-  
-
 	if(configPage == 4 && COL == 3) {
 	  if(ROW==1) Settings[S_DISPLAYRSSI]=!Settings[S_DISPLAYRSSI];
 	  if(ROW==2) timer.rssiTimer=15; // 15 secs to turn off tx anwait to read min RSSI
@@ -540,9 +541,9 @@ void serialMenuCommon()
 	  if(ROW==3) Settings[S_SCROLLING]=!Settings[S_SCROLLING];
 	  if(ROW==4) Settings[S_THROTTLEPOSITION]=!Settings[S_THROTTLEPOSITION];
 	  if(ROW==5) Settings[S_COORDINATES]=!Settings[S_COORDINATES];
-	  if(ROW==6) Settings[S_MODEICON]=!Settings[S_MODEICON];
+	  if(ROW==6) Settings[S_MODESENSOR]=!Settings[S_MODESENSOR];
 	  if(ROW==7) Settings[S_GIMBAL]=!Settings[S_GIMBAL];
-	  if(ROW==8) Settings[S_MAPMODE]=!Settings[S_MAPMODE];
+	  if(ROW==8) Settings[S_MAPMODE]=Settings[S_MAPMODE]+menudir;
 	}
 #endif
 #ifdef PAGE7
@@ -564,9 +565,18 @@ void serialMenuCommon()
 	  if(ROW==3) if((menudir == 1 && Settings[S_GPSTZ] < 130) || (menudir == -1 && Settings[S_GPSTZ] > 0))Settings[S_GPSTZ]=Settings[S_GPSTZ]+menudir*5;
 	}
 #endif
+#ifdef PAGE9
+	if(configPage == 9 && COL == 3) {
+	  if(ROW==1) Settings[S_DISTANCE_ALARM]=Settings[S_DISTANCE_ALARM]+menudir;
+	  if(ROW==2) Settings[S_ALTITUDE_ALARM]=Settings[S_ALTITUDE_ALARM]+menudir;
+	  if(ROW==3) Settings[S_SPEED_ALARM]=Settings[S_SPEED_ALARM]+menudir;
+	  if(ROW==4) Settings[S_FLYTIME_ALARM]=Settings[S_FLYTIME_ALARM]+menudir;
+	  if(ROW==5) Settings[S_AMPER_HOUR_ALARM]=Settings[S_AMPER_HOUR_ALARM]+menudir;
+	  if(ROW==6) Settings[S_AMPERAGE_ALARM]=Settings[S_AMPERAGE_ALARM]+menudir;
+	}
+#endif
   	if((ROW==10)&&(COL==1)) configExit();
 	if((ROW==10)&&(COL==2)) configSave();
-
 }
 
 void serialMSPreceive()
@@ -586,6 +596,11 @@ void serialMSPreceive()
   while(Serial.available())
   {
     c = Serial.read();
+
+    #ifdef GPSOSD    
+      armedtimer = 0;
+      if (GPS_newFrame(c)) GPS_NewData();   
+    #endif //GPSOSD   
 
     if (c_state == IDLE)
     {

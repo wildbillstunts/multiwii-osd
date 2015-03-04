@@ -1,5 +1,7 @@
 void SetupGroups(){
- //G_EEPROM,
+
+
+  //G_EEPROM,
   //G_RSSI,
  // G_Voltage,
   //G_Amperage,
@@ -22,7 +24,7 @@ void SetupGroups(){
     .setBarHeight(15)
     .setBackgroundColor(color(30,255))
     .setColorActive(red_)
-    .setBackgroundHeight(30)
+    .setBackgroundHeight(60)
     .setLabel("   Port Status")
     .disableCollapse()
     ;
@@ -35,7 +37,47 @@ void SetupGroups(){
     .setColorValue(green_)
     .setGroup("G_PortStatus");
     
+
+  OSD_CONTROLS = controlP5.addGroup("OSD_CONTROLS")
+                .setPosition(XOSD_CONTROLS,YOSD_CONTROLS)
+                .setWidth(110)
+                .setBarHeight(15)
+                .activateEvent(true)
+                .setBackgroundColor(color(30,255))
+                .setBackgroundHeight(90)
+                .setLabel("   OSD CONTROLS")
+                .disableCollapse();
+                //.close() 
+               ; 
+               
+  SAVE_LOAD = controlP5.addGroup("SAVE_LOAD")
+                .setPosition(XSAVE_LOAD,YSAVE_LOAD)
+                .setWidth(110)
+                .setBarHeight(15)
+                .activateEvent(true)
+                .setBackgroundColor(color(30,255))
+                .setBackgroundHeight(47)
+                .setLabel("     SETTINGS")
+                .disableCollapse();
+                //.close() 
+               ; 
+
  
+  G_LINKS = controlP5.addGroup("G_LINKS")
+                .setPosition(XLINKS,YLINKS)
+                .setWidth(345)
+                .setBarHeight(15)
+                .activateEvent(true)
+                .setBackgroundColor(color(30,255))
+                .setBackgroundHeight(104)
+                .setLabel("LINKS")
+                //.hide()
+                .disableCollapse()
+               ;
+
+
+
+
  
    G_EEPROM = GroupcontrolP5.addGroup("G_EEPROM")
                 .setPosition(XEEPROM,YEEPROM+15)
@@ -56,7 +98,7 @@ void SetupGroups(){
                 G_EEPROM.hide();
 G_RSSI = GroupcontrolP5.addGroup("G_RSSI")
                 
-                .setPosition(XRSSI,YRSSI+15)
+                .setPosition(XRSSI,YRSSI+49)
                 .setWidth(Col1Width)
                 .setColorForeground(color(30,255))
                 .setColorBackground(color(30,255))
@@ -104,7 +146,7 @@ G_Voltage = GroupcontrolP5.addGroup("G_Voltage")
                 .setBarHeight(15)
                 .setBackgroundColor(color(30,255))
                 .setColorActive(red_)
-                .setBackgroundHeight((6*17) +5)
+                .setBackgroundHeight((8*17) +5)
                 .setLabel("Amperage")
                 //.setGroup(SG)
                 .disableCollapse() 
@@ -132,8 +174,8 @@ G_Voltage = GroupcontrolP5.addGroup("G_Voltage")
                 .toUpperCase(false)
                 .align(controlP5.CENTER,controlP5.CENTER)
                 ; 
- G_Temperature = GroupcontrolP5.addGroup("G_Temperature")
-                .setPosition(XTemp,YTemp+15+15)
+ G_Alarms = GroupcontrolP5.addGroup("G_Alarms")
+                .setPosition(XTemp,YTemp+13)
                 .setWidth(Col3Width+10)
                 .setBarHeight(15)
                 .setColorForeground(color(30,255))
@@ -142,12 +184,12 @@ G_Voltage = GroupcontrolP5.addGroup("G_Voltage")
                 .setBarHeight(15)
                 .setBackgroundColor(color(30,255))
                 .setColorActive(red_)
-                .setBackgroundHeight((2*17) +5)
-                .setLabel("Temperature")
+                .setBackgroundHeight((4*17) +5)
+                .setLabel("Alarms")
                 //.setGroup(SG)
                 .disableCollapse() 
                 ; 
-                G_Temperature.captionLabel()
+                G_Alarms.captionLabel()
                 .toUpperCase(false)
                 .align(controlP5.CENTER,controlP5.CENTER)
                 ; 
@@ -214,7 +256,7 @@ G_Board= GroupcontrolP5.addGroup("G_Board")
 
                
 G_CallSign = GroupcontrolP5.addGroup("G_CallSign")
-                .setPosition(XCS,YCS+15)
+                .setPosition(XCS,YCS+49)
                 .setWidth(Col1Width)
                 .setBarHeight(15)
                 .setColorForeground(color(30,255))
@@ -223,7 +265,7 @@ G_CallSign = GroupcontrolP5.addGroup("G_CallSign")
                 .setBarHeight(15)
                 .setBackgroundColor(color(30,255))
                 .setColorActive(red_)
-                .setBackgroundHeight((3*17) +5)
+                .setBackgroundHeight((2*17) +5)
                 .setLabel("Call Sign")
                 //.setGroup(SG)
                 .disableCollapse(); 
@@ -287,7 +329,7 @@ G_HUD = GroupcontrolP5.addGroup("G_HUD")
                 .setColorActive(red_)
                 .setBackgroundHeight((7*17) +5)
                 .setLabel("HUD")
-                //.setGroup(SG)
+                //.setGroup(G_LINKS)
                 .disableCollapse() 
                 ; 
                 G_HUD.captionLabel()
@@ -317,7 +359,7 @@ G_COMPASS = GroupcontrolP5.addGroup("G_COMPASS")
 
 
 G_VREF = GroupcontrolP5.addGroup("G_VREF")
-                .setPosition(XVREF,YVREF+15)
+                .setPosition(XVREF,YVREF+49)
                 .setWidth(Col1Width)
                 .setBarHeight(15)
                 .setColorForeground(color(30,255))
@@ -346,7 +388,7 @@ G_TIME = GroupcontrolP5.addGroup("G_TIME")
                 .setBarHeight(16)
                 .setBackgroundColor(color(30,255))
                 .setColorActive(red_)
-                .setBackgroundHeight((4*17) +5)
+                .setBackgroundHeight((3*17) +5)
                 .setLabel("Time Settings")
                 //.setGroup(SG)
                 .disableCollapse() 
@@ -355,7 +397,7 @@ G_TIME = GroupcontrolP5.addGroup("G_TIME")
                 .toUpperCase(false)
                 .align(controlP5.CENTER,controlP5.CENTER)
                 ;        
-
+/*
 G_SPORT = GroupcontrolP5.addGroup("G_SPORT")
                 .setPosition(XSPORT,YSPORT)
                 .setWidth(Col3Width+10)
@@ -375,5 +417,6 @@ G_SPORT = GroupcontrolP5.addGroup("G_SPORT")
                 .toUpperCase(false)
                 .align(controlP5.CENTER,controlP5.CENTER)
                 ;        
-  
+*/  
+
 }

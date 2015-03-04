@@ -7,6 +7,11 @@
 #ifndef WHITEBRIGHTNESS
   #define WHITEBRIGHTNESS 0x01
 #endif
+#ifndef BLACKBRIGHTNESS
+  #define BLACKBRIGHTNESS 0x00
+#endif
+
+#define BWBRIGHTNESS ((BLACKBRIGHTNESS << 2) | WHITEBRIGHTNESS)
 
 //MAX7456 opcodes
 #define DMM_reg   0x04
@@ -114,23 +119,6 @@ void MAX7456Setup(void)
   uint8_t MAX7456_reset;
   uint8_t MAX_screen_rows;
 
- 
-  if(Settings[S_VIDEOSIGNALTYPE]) {    // PAL
-    //ENABLE_display = 0x48;
-    //ENABLE_display_vert = 0x4c;
-    MAX7456_reset = 0x42;
-    //DISABLE_display = 0x40;
-    MAX_screen_size = 480;
-    MAX_screen_rows = 16;
-  }
-  else {                                // NTSC
-    //ENABLE_display = 0x08;
-    //ENABLE_display_vert = 0x0c;
-    MAX7456_reset = 0x02;
-    //DISABLE_display = 0x00;
-    MAX_screen_size = 390;
-    MAX_screen_rows = 13;
-  }
 
   pinMode(MAX7456RESET,OUTPUT);
   digitalWrite(MAX7456RESET,HIGH); //hard enable
@@ -160,6 +148,37 @@ void MAX7456Setup(void)
   MAX7456_Send(VM0_reg, MAX7456_reset);
   delay(500);
 
+
+#ifdef AUTOCAM 
+  pinMode(MAX7456SELECT,OUTPUT);
+  digitalWrite(MAX7456SELECT,LOW);
+  spi_transfer(0xa0);
+  uint8_t srdata = spi_transfer(0xFF); 
+  if ((B00000001 & srdata) == 1){     //PAL
+      Settings[S_VIDEOSIGNALTYPE]=1; 
+  }
+  else if((B00000010 & srdata) == 1){ //NTSC
+      Settings[S_VIDEOSIGNALTYPE]=0;
+  }
+#endif
+ 
+  if(Settings[S_VIDEOSIGNALTYPE]) {   // PAL
+    //ENABLE_display = 0x48;
+    //ENABLE_display_vert = 0x4c;
+    MAX7456_reset = 0x42;
+    //DISABLE_display = 0x40;
+    MAX_screen_size = 480;
+    MAX_screen_rows = 16;
+  }
+  else {                              // NTSC
+    //ENABLE_display = 0x08;
+    //ENABLE_display_vert = 0x0c;
+    MAX7456_reset = 0x02;
+    //DISABLE_display = 0x00;
+    MAX_screen_size = 390;
+    MAX_screen_rows = 13;
+  }
+  
 #ifdef FASTPIXEL 
   // force fast pixel timing
   MAX7456_Send(MAX7456ADD_OSDM, 0x00);
@@ -170,10 +189,10 @@ void MAX7456Setup(void)
   delay(500);
 #endif
 
-  // set all rows to same charactor white level, 120%
+  // set all rows to same charactor black/white level
   uint8_t x;
   for(x = 0; x < MAX_screen_rows; x++) {
-    MAX7456_Send(MAX7456ADD_RB0+x, WHITEBRIGHTNESS);
+    MAX7456_Send(MAX7456ADD_RB0+x, BWBRIGHTNESS);
   }
 
   // make sure the Max7456 is enabled
@@ -221,6 +240,7 @@ volatile unsigned char vsync_wait = 0;
   vsync_wait = 0;
 }
 #endif
+
 void MAX7456_DrawScreen()
 {
 #ifdef USE_VSYNC
@@ -247,6 +267,10 @@ digitalWrite(MAX7456SELECT,LOW);
 #ifndef USE_VSYNC
     MAX7456_Send(MAX7456ADD_DMAH, xx>>8);
     MAX7456_Send(MAX7456ADD_DMAL, xx);
+#endif
+#ifdef OSD_SWITCH_RC 
+  if ((MwRcData[OSD_SWITCH_RC] > 1400) && (MwRcData[OSD_SWITCH_RC] < 1600))
+    screen[xx] = ' ';  
 #endif
     MAX7456_Send(MAX7456ADD_DMDI, screen[xx]);
     screen[xx] = ' ';

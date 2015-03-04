@@ -31,7 +31,9 @@ CheckBox ShowSimBackground, UnlockControls, SGPS_FIX,SFRSKY;
 //Toggles
 Toggle toggleModeItems[] = new Toggle[boxnames.length] ;
 Toggle SimControlToggle;
-// Slider2d ---
+// Toggle HudOptionEnabled;
+
+// Slider2d-
 Slider2D Pitch_Roll, Throttle_Yaw,MW_Pitch_Roll;
 //Sliders ---
 Slider s_Altitude,s_Vario,s_VBat,s_MRSSI;
@@ -48,18 +50,131 @@ Numberbox SGPS_numSat, SGPS_altitude, SGPS_speed, SGPS_ground_course,SGPS_distan
     //GPS_update=read8();
 
     
-//ControlWindow  Throttle_YawWindow;    
 
 //CheckBox checkboxModeItems[] = new CheckBox[boxnames.length] ;
 DecimalFormat OnePlaceDecimal = new DecimalFormat("0.0");
 DecimalFormat TwoPlaceDecimal = new DecimalFormat("0.00");
 
 
+void LayoutEditorSetup(){
+// Group LEW;
+
+  LEW = FontGroupcontrolP5.addGroup("LEW")
+    .setPosition(XLINKS,YLINKS)
+    .setWidth(345)
+    .setBarHeight(15)
+    .activateEvent(true)
+    .setBackgroundColor(color(30,255))
+    .setBackgroundHeight(103)
+    .setLabel("Layout Editor")
+    .setMoveable(true)
+    .disableCollapse()
+    .hide()
+    ;
+ LEW.captionLabel()
+    .toUpperCase(false);
+
+//  buttonLPOSUP = controlP5.addButton("bPOSLUP",1,10,35,12,19)
+  buttonLPOSUP = controlP5.addButton("bPOSLUP",1,10,10,12,19)
+  .setLabel("-")
+  .setColorBackground(blue_)
+  .setColorCaptionLabel(yellow_)
+  .setGroup(LEW);
+//  buttonLPOSDOWN = controlP5.addButton("bPOSLDOWN",1,23,35,12,19)
+  buttonLPOSDOWN = controlP5.addButton("bPOSLDOWN",1,23,10,12,19)
+  .setLabel("+")
+  .setColorBackground(blue_)
+  .setColorCaptionLabel(yellow_)
+  .setGroup(LEW);
+//  txtlblLayoutTxt = controlP5.addTextlabel("txtlblLayoutTxt","blah",37,35) 
+  txtlblLayoutTxt = controlP5.addTextlabel("txtlblLayoutTxt","blah",70,10) 
+  .setGroup(LEW);
+  txtlblLayoutTxt2 = controlP5.addTextlabel("txtlblLayoutTxt2","Text",37,10) 
+  .setGroup(LEW);
+
+
+
+//  buttonLPOSEN = controlP5.addButton("bPOSLEN",1,23,60,12,19)
+  buttonLPOSEN = controlP5.addButton("bPOSLEN",1,23,35,12,19)
+  .setLabel("*")
+  .setColorBackground(blue_)
+  .setColorCaptionLabel(yellow_)
+  .setGroup(LEW);
+//  txtlblLayoutEnTxt = controlP5.addTextlabel("txtlblLayoutEnTxt","-",37,60)
+  txtlblLayoutEnTxt = controlP5.addTextlabel("txtlblLayoutEnTxt","-",70,35)
+  .setGroup(LEW);
+  txtlblLayoutEnTxt2 = controlP5.addTextlabel("txtlblLayoutEnTxt2","Status",37,35)
+  .setGroup(LEW);
+
+//  buttonLPOSUP = controlP5.addButton("bHUDLUP",1,10,10,12,19)
+  buttonLPOSUP = controlP5.addButton("bHUDLUP",1,10,60,12,19)
+  .setLabel("-")
+  .setColorBackground(blue_)
+  .setColorCaptionLabel(yellow_)
+  .setGroup(LEW);
+//  buttonLPOSDOWN = controlP5.addButton("bHUDLDOWN",1,23,10,12,19)
+  buttonLPOSDOWN = controlP5.addButton("bHUDLDOWN",1,23,60,12,19)
+  .setLabel("+")
+  .setColorBackground(blue_)
+  .setColorCaptionLabel(yellow_)
+  .setGroup(LEW);
+
+
+//  txtlblLayoutHudTxt = controlP5.addTextlabel("txtlblLayoutHudTxt","-",37,10) 
+  txtlblLayoutHudTxt = controlP5.addTextlabel("txtlblLayoutHudTxt","-",70,60) 
+  .setGroup(LEW);
+  txtlblLayoutHudTxt2 = controlP5.addTextlabel("txtlblLayoutHudTxt2","HUD",37,60) 
+  .setGroup(LEW);
+ 
+
+  buttonLUP = controlP5.addButton("bLUP",1,195,10,40,19)
+  .setLabel("   UP")
+  .setColorBackground(blue_)
+  .setColorCaptionLabel(yellow_)
+  .setGroup(LEW);
+  buttonLDOWN = controlP5.addButton("bLDOWN",1,195,60,40,19)
+  .setLabel("DOWN")
+  .setColorBackground(blue_)
+  .setColorCaptionLabel(yellow_)
+  .setGroup(LEW);
+  buttonLLEFT = controlP5.addButton("bLLEFT",1,170,35,40,19)
+  .setLabel(" LEFT")
+  .setColorBackground(blue_)
+  .setColorCaptionLabel(yellow_)
+  .setGroup(LEW);
+  buttonLRIGHT = controlP5.addButton("bLRIGHT",1,220,35,40,19)
+  .setLabel("RIGHT")
+  .setColorBackground(blue_)
+  .setColorCaptionLabel(yellow_)
+  .setGroup(LEW);
+
+  buttonLSET = controlP5.addButton("bLSET",1,270,9,65,16)
+  .setLabel("Switches")
+  .setColorBackground(blue_)
+  .setColorCaptionLabel(yellow_)
+  .setGroup(LEW);
+  buttonLADD = controlP5.addButton("bLADD",1,270,28,65,16)
+  .setLabel("      ADD")
+  .setColorBackground(blue_)
+  .setColorCaptionLabel(yellow_)
+  .setGroup(LEW);
+  buttonLSAVE = controlP5.addButton("bLSAVE",1,270,47,65,16)
+  .setLabel("     SAVE")
+  .setColorBackground(blue_)
+  .setColorCaptionLabel(yellow_)
+  .setGroup(LEW);
+  buttonLCANCEL = controlP5.addButton("bLCANCEL",1,270,66,65,16)
+  .setLabel("      EXIT")
+  .setColorBackground(blue_)
+  .setColorCaptionLabel(yellow_)
+  .setGroup(LEW);
+}
 
  
 void SimSetup(){
 
-  
+LayoutEditorSetup();
+LinksSetup() ;  
  
 
   SG = ScontrolP5.addGroup("SG")
@@ -173,7 +288,7 @@ SimControlToggle.setPosition(5,5);
 SimControlToggle.setSize(35,10);
 SimControlToggle.setMode(ControlP5.SWITCH);
 SimControlToggle.setGroup(SGControlBox);
-SimControlToggle.setValue(1);
+SimControlToggle.setValue(0);
 
 SimControlText = controlP5.addTextlabel("SimControlText","Simulate on OSD",45,3);
 SimControlText.setGroup(SGControlBox);
@@ -515,32 +630,29 @@ void ShowCurrentThrottlePosition(){
 
 void ShowLatLon(){
   if(confItem[GetSetting("S_COORDINATES")].value() > 0) {
-  if(confItem[GetSetting("S_GPSCOORDTOP")].value() > 0) {
+//  if(confItem[GetSetting("S_GPSCOORDTOP")].value() > 0) {
   mapchar(0xca, SimPosn[MwGPSLatPositionTop]);
   makeText(" 43.09486N", SimPosn[MwGPSLatPositionTop]+1);
   mapchar(0xcb, SimPosn[MwGPSLonPositionTop]);
   makeText(" 71.88970W", SimPosn[MwGPSLonPositionTop]+1);
-  }
-  else {
-  mapchar(0xca, SimPosn[MwGPSLatPosition]);
-  makeText(" 43.09486N", SimPosn[MwGPSLatPosition]+1);
-  mapchar(0xcb, SimPosn[MwGPSLonPosition]);
-  makeText(" 71.88970W", SimPosn[MwGPSLonPosition]+1);
-
-  }
+//  }
+//  else {
+//  mapchar(0xca, SimPosn[MwGPSLatPosition]);
+//  makeText(" 43.09486N", SimPosn[MwGPSLatPosition]+1);
+//  mapchar(0xcb, SimPosn[MwGPSLonPosition]);
+//  makeText(" 71.88970W", SimPosn[MwGPSLonPosition]+1);
+//  }
 }
 }
 
 void ShowDebug(){
   if(confItem[GetSetting("S_DEBUG")].value() > 0) {
-  makeText("0:    000", SimPosn[debugPosition]);
-  makeText("1:    001", SimPosn[debugPosition]+LINE);
-  makeText("2:    010", SimPosn[debugPosition]+LINE+LINE);
-//  makeText("3:    011", SimPosn[debugPosition]+LINE+LINE+LINE);
-
-
-
-}}
+    makeText("0: "+debug[0], SimPosn[debugPosition]);
+    makeText("1: "+debug[1], SimPosn[debugPosition]+LINE);
+    makeText("2: "+debug[2], SimPosn[debugPosition]+LINE+LINE);
+    makeText("3: "+debug[3], SimPosn[debugPosition]+LINE+LINE+LINE);
+  }
+}
 
 
 void ShowSats(){
@@ -652,6 +764,26 @@ void ShowAPstatus(){
 }
 
 
+void ShowCallsign(){
+  if(confItem[GetSetting("S_DISPLAY_CS")].value() > 0) {
+    if (LEWvisible==1){
+      if (millis() < (csmillis)+4000){
+        csmillis = (millis()-4000);
+      }
+    }
+
+
+    if (millis() > (csmillis)+5000){
+   
+      String CallSText = controlP5.get(Textfield.class,"CallSign").getText().toUpperCase();
+      makeText(CallSText, SimPosn[callSignPosition]);
+      if (millis() > (csmillis + 6000)){
+        csmillis = millis();
+      }
+      
+    }
+}}
+
 void ShowAmperage(){
   if(confItem[GetSetting("S_AMPER_HOUR")].value() > 0) {
   mapchar(0xa4, SimPosn[pMeterSumPosition]);
@@ -659,10 +791,9 @@ void ShowAmperage(){
 }}
 
 void ShowTemp(){
-  if(confItem[GetSetting("S_DISPLAYTEMPERATURE")].value() > 0) {
   makeText("30", SimPosn[temperaturePosition]);
   mapchar(0x0e, SimPosn[temperaturePosition]+2);
-}}
+}
 
 void ShowAmps(){
   if(confItem[GetSetting("S_AMPERAGE")].value() > 0) {
@@ -1055,14 +1186,22 @@ void ShowSPort(){
 }
 
 void ShowMapMode(){
+  int mi;
+  if (toggleModeItems[9].getValue()>0)
+    mi = int(confItem[GetSetting("S_HUDOSDSW")].value());
+  else
+    mi = int(confItem[GetSetting("S_HUD")].value()); 
+  if (CONFIGHUDEN[mi][MapModePosition]==0)
+    return;
 int SYM_HOME      = 0x04;
 int SYM_AIRCRAFT  = 0X05;
 int SYM_RANGE_100 = 0x21;
 int SYM_RANGE_500 = 0x22;
 int SYM_RANGE_2500= 0x23;
 int SYM_RANGE_MAX = 0x24;
-int SYM_DIRECTION = 0x72;
-  int xdir=0;
+int SYM_DIRECTION = 0x72;  int xdir=0;
+  int mapstart=0;
+  int mapend=0;
   int ydir=0;
   int targetx=0;
   int targety=0;
@@ -1084,9 +1223,32 @@ int SYM_DIRECTION = 0x72;
   }
 
 //  int MwHeading=Mwheading;
-  
-  if (1==1) {
-    angle=(180+360+GPS_directionToHome-armedangle+MwHeading)%360;
+
+
+  switch(int(confItem[GetSetting("S_MAPMODE")].value())) {
+    case 1:
+      mapstart=0;mapend=1;
+      break;
+    case 2:
+      mapstart=1;mapend=2;
+      break;
+    case 3:
+      mapstart=0;mapend=2;
+      break;
+    case 4:
+      mapstart=1;mapend=2;
+      break;
+    default:
+      return;
+  }
+
+ 
+for(int maptype=mapstart; maptype<mapend; maptype++) {
+
+  if (maptype==1) {
+    angle=(180+360+GPS_directionToHome-armedangle)
+    %360;
+//    angle=(180+360+GPS_directionToHome-armedangle+MwHeading)%360;
   }
   else {
     angle=(360+GPS_directionToHome-MwHeading)%360;  
@@ -1149,7 +1311,7 @@ int SYM_DIRECTION = 0x72;
   targetpos= centerpos + (targetx/2) + (LINE*(targety/3)); 
 
 
-  if (1==1) {
+  if (maptype==1) {
     mapsymbolcenter = SYM_HOME;
     mapsymboltarget = SYM_AIRCRAFT;
   }
@@ -1161,7 +1323,7 @@ int SYM_DIRECTION = 0x72;
   mapchar(mapsymbolcenter,centerpos);
 
 /*
-  if (1==0) {
+  if (maptype==0) {
     tmp=(360+382+MwHeading-armedangle)%360/45;
     tmp = SYM_DIRECTION + tmp;
   }
@@ -1170,7 +1332,7 @@ int SYM_DIRECTION = 0x72;
   }
 */
 
-/*  if (MAPTYPE==1) {
+/*  if (confItem[GetSetting("S_MAPMODE")].value()==4) {
     tmp=(360+382+MwHeading-armedangle)%360/45;
     mapsymboltarget = SYM_DIRECTION + tmp;
   }
@@ -1190,15 +1352,41 @@ int SYM_DIRECTION = 0x72;
       else
         symx=1;
     }
-    tmp = 0xD0 + symy + (symx*3);
+
+  if (maptype==0) 
+    tmp = 0xD6;
+  else {
+    tmp = 0xD0;
+/*  if (maptype==1) {
+    tmp=(360+382+MwHeading-armedangle)%360/45;
+    mapsymboltarget = SYM_DIRECTION + tmp;
+    0x72
+  }
+*/
+
+}
+  mapsymboltarget = mapsymboltarget + symy + (symx*3);
+
+
+    tmp = tmp+ symy + (symx*3);
 //System.out.println(xdir+" "+ydir+" "+symx+" "+symy+" "+targetx+" "+targety+" "+tmp);
   mapchar(mapsymbolrange,SimPosn[MapModePosition]);
+
+  if (confItem[GetSetting("S_MAPMODE")].value()==4) {
+    tmp=(360+382+MwHeading-armedangle)%360/45;
+    tmp = SYM_DIRECTION + tmp;
+  }
 
   if (maxdistance>20) {
     mapchar(tmp,targetpos);
   }
+}
 
  
+}
+
+void LinksSetup(){
+
 }
 
 

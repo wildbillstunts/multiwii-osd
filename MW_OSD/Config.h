@@ -6,14 +6,30 @@
 #define SBDIRECTION     // Enable/disable sidebar indicators (changes in speed or altitude)
 #define HORIZON         // Enable/disable HORIZON indicator
 #define MAPMODE         // Enable/disable MAP MODE - map indication of relative positions of home and aircraft
-#define GPSTIME         // Enable/disable GPS Time functions
-#define SPORT           // Enable/disable FRSKY S.PORT cell code
+//#define GPSTIME         // Enable/disable GPS Time functions
+//#define SPORT           // Enable/disable FRSKY S.PORT cell code
 
 
 /********************       HARDWARE OSD settings      *********************/
-//#define USE_VSYNC                 // Remove "sparklies" on boards that support VSYNC 
-//#define WITESPYV2                 // If using Witespy V2 OSD, select this to use alternative resistors / pinouts 
-//#define RUSHDUINO                 // If using Rushduino, select this
+//Choose ONLY ONE option:
+#define MINIMOSD                    // Choose this if using standard MINIMOSD hardware (default for 95% of boards) 
+//#define WITESPYV1.1               // Choose this if using Witespy V1.1 OSD, select this to use alternative resistors / pinouts 
+//#define RUSHDUINO                 // Choose this if using Rushduino
+
+
+/********************       CONTROLLER SOFTWARE      *********************/
+//Choose ONLY ONE option:-
+//#define MULTIWII_V24              // Undefine this if you are using MW versions 2.4  
+#define MULTIWII_V23                // Undefine this if you are using MW versions 2.2/2.3  
+//#define MULTIWII_V21              // Undefine this if you are using MW versions 2.0/2.1  (for BOXNAMES compatibility)
+//#define BASEFLIGHT                // Undefine this if you are using BASEFLIGHT with 32bit hardware for compatibility with heading and current data
+//#define CLEANFLIGHT               // Undefine this if you are using CLEANFLIGHT with 32bit hardware for compatibility with heading and current data
+//#define HARIKIRI                  // Undefine this if you are using HARIKIRI (for BOXNAMES compatibility)
+//#define NOCONTROLLER              // Undefine this if you are using GPSOSD
+
+
+/********************       AIRCRAFT settings      *********************/
+//#define FIXEDWING                 // Undefine this if you are using MW fixed wing from PatrikE 
 
 
 /********************       HARDWARE CURRENT sensor settings      *********************/
@@ -21,37 +37,59 @@
 #define AMPERAGEOFFSET  0           // Optional extra for high offset sensors not supported in GUI (typically bidirectional sensors use a value of 256-512) 
 
 
+/********************       OSD SCREEN SWITCH settings      *********************/
+//Choose ONLY ONE option:
+#define OSD_SWITCH                  // Uses 2 way screen switch using OSD Switch via Flight Controller. MUST Ensure enabled on flight controller - e.g. #define OSD_SWITCH on multiwii
+//#define OSD_SWITCH_RC 5           // Enables 2 or 3 way screen switch using RC data. Midpoint = blank screen. Specify channel (range 0-7 AUX1=4 AUX4=7)
+
+
 /********************       FILTER settings      *********************/
-// Choose only one of the following
-#define STAGE2FILTER              // Enable for smoother readings of voltage / current / RSSI. 
-//#define SMOOTHFILTER              // Enable for smoothest readings of voltage / current / RSSI. Uses more memory. Prototype
+//Choose ONLY ONE option:
+#define STAGE2FILTER               // Enable for smoother readings of voltage / current / RSSI. 
+//#define SMOOTHFILTER             // Enable for smoothest readings of voltage / current / RSSI. Uses more memory. Prototype
 
 
 /********************       RSSI settings      *********************/
-//#define FASTPWMRSSI               // Undefine this if you are using non standard PWM for RSSI ( high frequency ) 
+//#define FASTPWMRSSI              // Undefine this if you are using non standard PWM for RSSI ( high frequency ) 
 
 
-/********************       CONTROLLER settings      *********************/
-//#define BASEFLIGHT                // Undefine this if you are using BASEFLIGHT / NAZE32 to correct for heading dispaly issues
-//#define HARIKIRI                  // Undefine this if you are using HARIKIRI (for BOXNAMES compatibility)
-//#define FIXEDWING                 // Undefine this if you are using MW fixed wing from PatrikE - to use GPS heading and altitude instead of BARO/MAG
-//#define MULTIWII_V21              // Undefine this if you are using MW versions 2.0/2.1  (for BOXNAMES compatibility)
-#define MULTIWII_V23                // Undefine this if you are using MW versions 2.2/2.3  
-//#define MULTIWII_V24              // Undefine this if you are using MW versions 2.4  
+/********************       GPS settings      *********************/
+#define  MINSATFIX 5               // Number of sats required for a fix. 5 minimum. More = better
+
+
+/********************       GPS OSD settings      *********************/
+// **ONLY** FOR STANDALONE GPS MODE WITH NO FLIGHT CONTROLLER
+// Choose ONLY ONE option:
+//#define NMEA                     // Enable if using a standard NMEA based GPS
+//#define UBLOX                    // Enable if using a standard UBLOX based GPS
+//#define MTK                      // Enable if using a standard MTK based GPS
+//#define MTK_BINARY16             // Enable if using MTK3329 chipset based GPS with DIYDrones binary firmware v1.6
+//#define MTK_BINARY19             // Enable if using MTK3329 chipset based GPS with DIYDrones binary firmware v1.9
+
+
+/******************** Serial speed settings *********************/
+// Choose ONLY ONE option:
+#define BAUDRATE 115200
+//#define BAUDRATE 57600
+//#define BAUDRATE 38400
+//#define BAUDRATE 19200
 
 
 /********************       CALLSIGN settings      *********************/
-//#define CALLSIGNALWAYS  341       // Enable to permanently display callsign. Number = screen position (row*30 + column)
-//#define FREETEXTLLIGHTS 342       // Enable to display freetext (or callsign) when LLIGHTS Switch active on TX. Number = screen position (row*30 + column)
-//#define FREETEXTGIMBAL  342       // Enable to display freetext (or callsign) when GIMBAL Switch active on TX. Number = screen position (row*30 + column)
+#define   CALLSIGNINTERVAL 60      // How frequently to display Callsign (in seconds)
+#define   CALLSIGNDURATION 4       // How long to display Callsign (in seconds)
+//#define CALLSIGNALWAYS           // Alternative option - enable to permanently display callsign.
+//#define FREETEXTLLIGHTS          // Alternative option - enable to display freetext (or callsign) when LLIGHTS Switch active on TX.
+//#define FREETEXTGIMBAL           // Alternative option - enable to display freetext (or callsign) when GIMBAL Switch active on TX.
 
 
 /********************       STARTUP settings      *********************/
-//#define INTRO_VERSION               "SCARAB OSD - R1.2" // Call the OSD something else if you prefer. KVOSD is not permitted - LOL. 
+//#define INTRO_VERSION               "SHIKI OSD - R1.3" // Call the OSD something else if you prefer. KVOSD is not permitted - LOL. 
 //#define INTRO_CALLSIGN            // Enable to display callsign at startup
 //#define INTRO_TIMEZONE            // Enable to display timezone at startup - if GPS TIME is enabled
 //#define INTRO_DELAY 5             // Seconds intro screen should show for. Default is 10 
 #define INTRO_MENU                  // Enable to display TX stick MENU 
+//#define STARTUPDELAY 2000         // Enable alternative startup delay (in ms) to allow MAX chip voltage to rise fully and initialise before configuring 
 
 
 /********************       GPS type settings      *********************/
@@ -60,9 +98,6 @@
 
 
 /********************       MAP MODE Settings       *********************/
-#define MAPTYPE 1                   // 0 for RADAR - home is aircraft, map shows location of home relative to aircraft 
-                                    // 1 for MAP - home is center, map shows location of aircraft relative to home 
-//#define MAPRESLOW                 // enable to use low res original directional arrow in map mode 1. Disable to use high res position 
 //#define MAPMODENORTH              // Enable to use North as MAP reference in MODE 1 instead of take off direction (Default = disable) 
 
 
@@ -77,19 +112,26 @@
 
 
 /********************       Display Settings         ************************/
+//#define AUTOCAM                   // Enable autodetect Camera type PAL/NTSC. Overrides GUI/OSD settings. Not recommended for > 600TVL cameras
 #define DECIMAL '.'                 // Decimal point character, change to what suits you best (.) (,)
+//#define USE_VSYNC                 // Remove "sparklies" on boards that support VSYNC 
 //#define SHIFTDOWN                 // Select if your monitor cannot display top line fully. It shifts top 3 lines down. Not suitable for all layouts
 //#define ALT_CENTER                // Enable alternative center crosshair
 //#define HIDEARMEDSTATUS           // Enable to hide ARMED / DISARMED status
 //#define FASTPIXEL                 // Optional - may improve resolution - especially hi res cams
-//#define WHITEBRIGHTNESS 0x00      // Optional change from default 0x00=120%,0x10=90%0x11=80%  default is 0x01=100%,
+//#define WHITEBRIGHTNESS 0x00      // Optional change from default 0x00=120%,0x01=100%,0x10=90%,0x11=80%  default is 0x01=100%
+//#define BLACKBRIGHTNESS 0x00      // Optional change from default 0x00=0%,0x01=10%,0x10=20%0x11=30%  default is 0x00=0%
 //#define FULLAHI                   // Enable to display a slightly longer AHI line
 //#define I2CERROR 3                // Autodisplay Mutltiwii I2C errors if exceeds specified count 
+//#define SHORTSTATS                // Display only timer on flight summary 
+#define DISP_LOW_VOLTS_WARNING      // Enable prominent low voltage warning text
+#define FORCE_DISP_LOW_VOLTS        // Enable display low voltage warning override for screen layouts where its disabled
 #define APINDICATOR                 // Enable to display AUTOPILOT instead of RTH distance 
 
-/********************       Serial speed settings      *********************/
-#define BAUDRATE 115200             // Serial comms speed               
 
+/********************  TEMPERATURE  settings      *********************/
+//#define TEMPSENSOR                // Enable if you have a hardware temperature sensor - DEPRECATED
+#define TEMPERATUREMAX 50           // Temperature warning value
 
 
 
@@ -97,6 +139,7 @@
 /*--------------------------       advanced parameters      ----------------------------------------------------*/
 /*--------------------------       advanced parameters      ----------------------------------------------------*/
 /*--------------------------       advanced parameters      ----------------------------------------------------*/
+
 
 /********************   ENABLE/DISABLE CONFIG PAGES via STICK MENU     *********************/
 //large memory savings if not needed, comment to disable
@@ -108,18 +151,24 @@
 #define PAGE6 //DISPLAY
 #define PAGE7 //ADVANCED
 #define PAGE8 //GPS TIME
+#define PAGE9 //ALARMS
 
 
-/********************  CONTROLLER compatibility **********************/
-#ifdef BASEFLIGHT                     
+/********************  HARDWARE PINS definitions  *********************/
+#define AMPERAGEPIN   A1
+#define TEMPPIN       A6           
+#define RSSIPIN       A3              
+#define PWMRSSIPIN    A3              
+#define LEDPIN        7
+
+
+/********************  CONTROLLER rule definitions  **********************/
+#if defined(BASEFLIGHT) || defined(CLEANFLIGHT)                      
     #define AMPERAGECORRECT         // required to use Higher MW amperage but with less resolution
-    #define HEADINGCORRECT          // required to use alternative MW heading -180 to +180
+    #define HEADINGCORRECT          // required to correct for MWheading being 0>360 vs MWII -180>+180
 #endif
-#ifdef HARIKIRI                     
-    #define BOXNAMES                // required to support HARIKIRI
-#endif
-#ifdef MULTIWII_V21                     
-    #define BOXNAMES                // required to support multiwii 2.1 / 2.0
+#if defined(HARIKIRI) || defined(MULTIWII_V21)                     
+    #define BOXNAMES                // required to support legacy protocol
 #endif
 #ifdef MULTIWII_V24                     
     #define AMPERAGECORRECT         // required to use Higher MW amperage but with less resolution
@@ -128,21 +177,8 @@
 #endif
 
 
-/********************  ADVANCED HARDWARE settings      *********************/
-//#define TEMPSENSOR                // Enable if you have a hardware temperature sensor
-//#define STARTUPDELAY 2000         // Enable alternative startup delay (in ms) to allow MAX chip voltage to rise fully and initialise before configuring 
 
-
-/********************  HARDWARE PINS settings      *********************/
-#define AMPERAGEPIN   A1
-#define TEMPPIN       A6           
-#define RSSIPIN       A3              
-#define PWMRSSIPIN    A3              
-#define LEDPIN        7
-
-
-/********************  OSD HARDWARE BOARD SPECIFIC settings      *********************/
-
+/********************  OSD HARDWARE rule definitions  *********************/
 #ifdef RUSHDUINO                     
     # define MAX7456SELECT 10        // ss 
     # define MAX7456RESET  9         // RESET
@@ -150,7 +186,7 @@
     # define MAX7456SELECT 6         // ss
     # define MAX7456RESET  10        // RESET
 #endif
-#ifdef WITESPYV2                     
+#ifdef WITESPYV1.1                     
     #define VOLTAGEPIN    A2
     #define VIDVOLTAGEPIN A0
     #define DIVIDER1v1      0.0002      // Voltage divider for 1.1v reference. 
@@ -163,7 +199,41 @@
 #endif
 
 
+/********************  GPS OSD rule definitions  *********************/
+#if defined MTK_BINARY16
+  #define GPSOSD
+  #define NMEA
+  #define INIT_MTK_GPS
+  #define MTK_BINARY16
+#endif
+
+#if defined MTK_BINARY19
+  #define GPSOSD
+  #define NMEA
+  #define INIT_MTK_GPS
+  #define MTK_BINARY19
+#endif
+
+#if defined MTK
+  #define GPSOSD
+  #define NMEA
+  #define INIT_MTK_GPS
+#endif
+
+#if defined UBLOX
+  #define GPSOSD
+#endif
+
+#if defined NMEA
+  #define GPSOSD
+#endif
+
+#if defined(GPSOSD)
+  #undef INTRO_MENU
+#endif
+
+
 /*----------------------------------------------       Developer parameters      ----------------------------------------------------*/
-#define DEBUG         // Enable/disable option to display OSD debug values 
-#define DEBUGMW       // Disable to prevent load Mutltiwii debug values from MSP 
+//#define DEBUG         // Enable/disable option to display OSD debug values 
+//#define DEBUGMW       // Disable to prevent load Mutltiwii debug values from MSP 
 
