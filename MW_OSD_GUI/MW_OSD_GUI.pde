@@ -741,20 +741,18 @@ DONATEimage  = loadImage("DON_def.png");
     commListMax = i;
   }
   commListbox.addItem("Close Comm",++commListMax); // addItem(name,value)
-  txtlblWhichcom = controlP5.addTextlabel("txtlblWhichcom","No Port Selected",5,22).setGroup(G_PortStatus); // textlabel(name,text,x,y)
-  txtmessage = controlP5.addTextlabel("txtmessage","",3,250); // textdebug
-
-// BUTTONS SELECTION ---------------------------------------
+  commListbox.addItem("Pass Thru Comm",commListMax+1); // addItem(name,value)
+  // text label for which comm port selected
+  txtlblWhichcom = controlP5.addTextlabel("txtlblWhichcom","No Port Selected",5,65); // textlabel(name,text,x,y)
   
-  buttonSAVE = controlP5.addButton("bSAVE",1,20,5,60,16); buttonSAVE.setLabel("    SAVE").setGroup(SAVE_LOAD).setColorBackground(osdcontr_); 
-  buttonIMPORT = controlP5.addButton("bIMPORT",1,20,25,60,16); buttonIMPORT.setLabel("    LOAD").setGroup(SAVE_LOAD).setColorBackground(osdcontr_);   
-
-  buttonREAD = controlP5.addButton("READ",1,20,5,60,16);buttonREAD.setColorBackground(osdcontr_).setGroup(OSD_CONTROLS).setLabel("    READ");
-  buttonWRITE = controlP5.addButton("WRITE",1,20,25,60,16);buttonWRITE.setColorBackground(osdcontr_).setGroup(OSD_CONTROLS).setLabel("   WRITE");
-  buttonRESET = controlP5.addButton("DEFAULT",1,20,45,60,16);buttonRESET.setColorBackground(osdcontr_).setGroup(OSD_CONTROLS).setLabel(" DEFAULT");
-  buttonRESTART = controlP5.addButton("RESTART",1,20,65,60,16);buttonRESTART.setColorBackground(osdcontr_).setGroup(OSD_CONTROLS).setLabel(" RESTART");
-
-  buttonLEW = controlP5.addButton("LEW",1,10,10,92,16);buttonLEW.setColorBackground(osdcontr_).setGroup(G_LINKS).setLabel("Layout Editor");
+  buttonSAVE = controlP5.addButton("bSAVE",1,5,45,40,19); buttonSAVE.setLabel("SAVE"); buttonSAVE.setColorBackground(red_);
+  buttonIMPORT = controlP5.addButton("bIMPORT",1,50,45,40,19); buttonIMPORT.setLabel("LOAD"); buttonIMPORT.setColorBackground(red_); 
+  
+  buttonREAD = controlP5.addButton("READ",1,XControlBox+30,YControlBox+25,45,16);buttonREAD.setColorBackground(red_);
+  buttonWRITE = controlP5.addButton("WRITE",1,XControlBox+30,YControlBox+50,45,16);buttonWRITE.setColorBackground(red_);
+  buttonRESET = controlP5.addButton("DEFAULT",1,XControlBox+25,YControlBox+75,55,16);buttonRESET.setColorBackground(red_);
+  buttonRESTART = controlP5.addButton("RESTART",1,XControlBox+25,YControlBox+100,55,16);buttonRESTART.setColorBackground(red_);
+    
     
 
 // EEPROM----------------------------------------------------------------
@@ -1429,11 +1427,11 @@ void MatchConfigs(){
 
 // controls comport list click
 public void controlEvent(ControlEvent theEvent) {
-  
+    
   try{
   if (theEvent.isGroup())
     if (theEvent.name()=="portComList")
-      InitSerial(theEvent.group().value()); // initialize the serial port selected
+      InitSerial(theEvent.group().value()); // initialize the serial port selected      
   }catch(Exception e){
     System.out.println("error with Port");
   }

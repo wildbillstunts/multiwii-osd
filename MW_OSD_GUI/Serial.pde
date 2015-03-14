@@ -84,6 +84,8 @@ private static final int
   MSP_RESET_CONF           =208,
   MSP_SELECT_SETTING       =210,
   MSP_SPEK_BIND            =240,
+  
+  MSP_PASSTHRU_SERIAL      =244,
 
   MSP_EEPROM_WRITE         =250,
   
@@ -106,6 +108,8 @@ private static final int
 
 // initialize the serial port selected in the listBox
 void InitSerial(float portValue) {
+ 
+  
   if (portValue < commListMax) {
     if(init_com == 0){ 
       try{
@@ -138,6 +142,16 @@ void InitSerial(float portValue) {
      }
       //+((int)(cmd&0xFF))+": "+(checksum&0xFF)+" expected, got "+(int)(c&0xFF));
     }
+  }
+  else if(portValue > commListMax && init_com == 1){
+      System.out.println("Serial Port Pass Through Starting" );
+      
+      SendCommand(MSP_PASSTHRU_SERIAL);
+      delay(1000);
+     
+      SendCommand(MSP_IDENT);     
+      SendCommand(MSP_STATUS);      
+      READ();
   }
   else {
     if(init_com == 1){
@@ -489,6 +503,19 @@ void SendCommand(int cmd){
         serialize8(0); // type of multicopter
         serialize8(0);         // MultiWii Serial Protocol Version
         serialize32(0);        // "capability"
+        tailSerialReply();
+        PortIsWriting = false;
+      break;
+      
+      case MSP_PASSTHRU_SERIAL:
+        PortIsWriting = true;
+        serialize8('$');
+        serialize8('M');
+        serialize8('<');//this is the important bit
+        outChecksum = 0; // start calculating a new checksum
+        serialize8(1);
+        serialize8(MSP_PASSTHRU_SERIAL);
+        serialize8(0);
         tailSerialReply();
         PortIsWriting = false;
       break;
