@@ -677,6 +677,7 @@ GUIBackground = loadImage("GUI_def.jpg");
     commListMax = i;
   }
   commListbox.addItem("Close Comm",++commListMax); // addItem(name,value)
+  commListbox.addItem("Pass Thru Comm",commListMax+1); // addItem(name,value)
   // text label for which comm port selected
   txtlblWhichcom = controlP5.addTextlabel("txtlblWhichcom","No Port Selected",5,65); // textlabel(name,text,x,y)
   
@@ -1386,18 +1387,18 @@ void MatchConfigs(){
 
 // controls comport list click
 public void controlEvent(ControlEvent theEvent) {
-  
+    
   try{
   if (theEvent.isGroup())
     if (theEvent.name()=="portComList")
-      InitSerial(theEvent.group().value()); // initialize the serial port selected
+      InitSerial(theEvent.group().value()); // initialize the serial port selected      
   }catch(Exception e){
     System.out.println("error with Port");
   }
 
-if (theEvent.name()=="CallSign"){
-  CheckCallSign();
-}
+  if (theEvent.name()=="CallSign"){
+    CheckCallSign();
+  }
 
       
   try{
